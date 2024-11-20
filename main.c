@@ -92,7 +92,7 @@ Grammar read_productions(FILE* fp, int n) {
 
 int main(int argc, char** argv) {
 
-    FILE* fp = fopen("./file", "r");
+    FILE* fp = fopen("./productions", "r");
     Grammar g = read_productions(fp, atoi(argv[1]));
     fclose(fp);
 
