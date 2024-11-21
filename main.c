@@ -201,6 +201,11 @@ int main(int argc, char** argv) {
 
     srand(clock());
 
+    if(argv[1] == NULL) {
+        fprintf(stderr, "[!] Pass Number Of Productions To Be Included\n");
+        exit(-1);
+    }
+
     int n = atoi(argv[1]); // total number of productions to include from the productions_file
 
     FILE* fp = fopen("./productions", "r");
