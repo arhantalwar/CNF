@@ -78,6 +78,16 @@ Grammar read_productions(FILE* fp, int n) {
         char* rule = strtok(to_production_string, "|");
 
         while (rule != NULL) {
+
+            size_t rule_len = strlen(rule);
+
+            for(int i = 0; i < rule_len; i++) {
+                if(rule[i] == '\n') {
+                    rule[i] = '\0';
+                    break;
+                }
+            }
+
             build_to_production[num_count_2++] = strdup(rule);
             rule = strtok(NULL, "|");
         }
@@ -153,7 +163,7 @@ char* join(char* left, char* production, char* right) {
 
 }
 
-void string_iter(Grammar g, int n, char* word, int curr_index) {
+void generate_word(Grammar g, int n, char* word, int curr_index) {
 
     for(int i = 0; i < strlen(word); i++) {
 
@@ -169,15 +179,15 @@ void string_iter(Grammar g, int n, char* word, int curr_index) {
             symbol_production = get_random_production(g, is_non_terminal);
             char* right = collect_string(word, i+1, strlen(word));
 
-            printf("    Left: %s", left);
-            printf("    Production: %s", symbol_production);
-            printf("    Right: %s", right);
+            /* printf("    Left: %s", left); */
+            /* printf("    Production: %s", symbol_production); */
+            /* printf("    Right: %s", right); */
 
             word = join(left, symbol_production, right);
 
             printf("\nNEW WORD: %s\n", word);
 
-            string_iter(g, n, word, ++curr_index);
+            generate_word(g, n, word, ++curr_index);
             return;
 
         }
@@ -192,7 +202,6 @@ int main(int argc, char** argv) {
     srand(clock());
 
     int n = atoi(argv[1]); // total number of productions to include from the productions_file
-    int d = atoi(argv[2]); // depth till which the derivation should be carried
 
     FILE* fp = fopen("./productions", "r");
     Grammar g = read_productions(fp, n);
@@ -201,7 +210,7 @@ int main(int argc, char** argv) {
     char* entry_point = get_random_production(g, i);
     printf("Entry Point %s\n", entry_point);
 
-    string_iter(g, n, entry_point, 0);
+    generate_word(g, n, entry_point, 0);
 
     fclose(fp);
 
