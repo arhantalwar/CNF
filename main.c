@@ -61,6 +61,9 @@ Grammar read_productions(FILE* fp, int n) {
 
         }
 
+        size_t token_len = strlen(token);
+        token[token_len-2] = '\0';
+
         strcat(token, &symbol);
         strcat(to_production_string, token);
         strcpy(token, "");
@@ -115,8 +118,9 @@ char* get_random_production(Grammar g, int from_production) {
     int num_production = g[from_production]->num_production;
     char* to_production = g[from_production]->to_production[rand() % num_production];
 
-    char* production = (char*) malloc(sizeof(char) * (strlen(to_production) + 1));
+    char* production = (char*) malloc(sizeof(char) * (strlen(to_production)));
     production = to_production;
+
     return production;
 
 }
@@ -129,13 +133,13 @@ char* collect_string(char* word, int start, int end) {
         dest[i] = word[start+i];
     }
 
-    dest[end=start] = '\0';
+    dest[end-start] = '\0';
 
     return dest;
 
 }
 
-char* helper(char* left, char* production, char* right) {
+char* join(char* left, char* production, char* right) {
 
     size_t total_size = strlen(left) + strlen(production) + strlen(right) + 1;
 
@@ -151,10 +155,6 @@ char* helper(char* left, char* production, char* right) {
 
 void string_iter(Grammar g, int n, char* word, int curr_index) {
 
-    if (curr_index == strlen(word)) {
-        return;
-    }
-
     for(int i = 0; i < strlen(word); i++) {
 
         char* symbol_production;
@@ -162,16 +162,23 @@ void string_iter(Grammar g, int n, char* word, int curr_index) {
         int is_non_terminal = find_non_terminal(g, n, symbol);
 
         if(is_non_terminal == -1) {
-            return;
+            continue;
         } else {
 
-            symbol_production = get_random_production(g, is_non_terminal);
-
             char* left = collect_string(word, 0, i);
+            symbol_production = get_random_production(g, is_non_terminal);
             char* right = collect_string(word, i+1, strlen(word));
 
-            word = helper(left, symbol_production, right);
-            string_iter(g, n, word, curr_index++);
+            printf("    Left: %s", left);
+            printf("    Production: %s", symbol_production);
+            printf("    Right: %s", right);
+
+            word = join(left, symbol_production, right);
+
+            printf("\nNEW WORD: %s\n", word);
+
+            string_iter(g, n, word, ++curr_index);
+            return;
 
         }
 
@@ -189,11 +196,12 @@ int main(int argc, char** argv) {
 
     FILE* fp = fopen("./productions", "r");
     Grammar g = read_productions(fp, n);
-    int i = find_non_terminal(g, n, 'S');
 
+    int i = find_non_terminal(g, n, 'S');
     char* entry_point = get_random_production(g, i);
+    printf("Entry Point %s\n", entry_point);
+
     string_iter(g, n, entry_point, 0);
-    
 
     fclose(fp);
 
