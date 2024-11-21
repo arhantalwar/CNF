@@ -185,7 +185,7 @@ void generate_word(Grammar g, int n, char* word, int curr_index) {
 
             word = join(left, symbol_production, right);
 
-            printf("\nNEW WORD: %s\n", word);
+            printf("NEW WORD: %s\n", word);
 
             generate_word(g, n, word, ++curr_index);
             return;
