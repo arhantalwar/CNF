@@ -108,7 +108,7 @@ Grammar read_productions(FILE* fp, int n) {
 void print_grammar(Grammar g, int n) {
     for(int i = 0; i < n; i++) {
         int num = g[i]->num_production;
-        for(int j = 0; j < n; j++) {
+        for(int j = 0; j < num; j++) {
             printf("%c->%s\n", g[i]->from_production, g[i]->to_production[j]);
         }
     }
@@ -163,7 +163,7 @@ char* join(char* left, char* production, char* right) {
 
 }
 
-void generate_word(Grammar g, int n, char* word, int curr_index) {
+void generate_word(Grammar g, int n, char* word) {
 
     for(int i = 0; i < strlen(word); i++) {
 
@@ -179,15 +179,15 @@ void generate_word(Grammar g, int n, char* word, int curr_index) {
             symbol_production = get_random_production(g, is_non_terminal);
             char* right = collect_string(word, i+1, strlen(word));
 
+            word = join(left, symbol_production, right);
+
+            printf("\nNEW WORD: %s\n", word);
+
             /* printf("    Left: %s", left); */
             /* printf("    Production: %s", symbol_production); */
             /* printf("    Right: %s", right); */
 
-            word = join(left, symbol_production, right);
-
-            printf("NEW WORD: %s\n", word);
-
-            generate_word(g, n, word, ++curr_index);
+            generate_word(g, n, word);
             return;
 
         }
@@ -213,10 +213,13 @@ int main(int argc, char** argv) {
 
     int i = find_non_terminal(g, n, 'S');
     char* entry_point = get_random_production(g, i);
-    printf("Entry Point %s\n", entry_point);
+    printf("Entry Point S -> %s\n", entry_point);
 
-    generate_word(g, n, entry_point, 0);
+    generate_word(g, n, entry_point);
+    /* print_grammar(g, n); */
 
+    free(g);
+    free(entry_point);
     fclose(fp);
 
     return 0;
