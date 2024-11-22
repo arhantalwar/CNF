@@ -199,13 +199,7 @@ void generate_word(Grammar g, int n, char* word) {
 
 int main(int argc, char** argv) {
 
-    srand(10);
-
-    // WORD GENERATION LENGTH
-    // Random Length Gen -> clock()
-    // 02 -> Small
-    // 10 -> Medium
-    // 11 -> Large
+    srand(47);
 
     if(argv[1] == NULL) {
         fprintf(stderr, "[!] Pass Number Of Productions To Be Included\n");
