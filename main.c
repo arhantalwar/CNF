@@ -48,7 +48,7 @@ Grammar read_productions(FILE* fp, int n) {
 
             symbol = getc(buffer_fp);
 
-            if (symbol == '-' || symbol == '>') {
+            if (symbol == '=' || symbol == '>') {
                 continue;
             } else if (symbol == '|') {
                 num_count++;
@@ -199,7 +199,13 @@ void generate_word(Grammar g, int n, char* word) {
 
 int main(int argc, char** argv) {
 
-    srand(clock());
+    srand(10);
+
+    // WORD GENERATION LENGTH
+    // Random Length Gen -> clock()
+    // 02 -> Small
+    // 10 -> Medium
+    // 11 -> Large
 
     if(argv[1] == NULL) {
         fprintf(stderr, "[!] Pass Number Of Productions To Be Included\n");
@@ -213,8 +219,8 @@ int main(int argc, char** argv) {
 
     int i = find_non_terminal(g, n, 'S');
     char* entry_point = get_random_production(g, i);
-    printf("Entry Point S -> %s\n", entry_point);
 
+    printf("Entry Point S -> %s\n", entry_point);
     generate_word(g, n, entry_point);
     /* print_grammar(g, n); */
 
