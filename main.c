@@ -2,6 +2,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdbool.h>
+
+typedef enum BinOp {
+    ADD,
+    MUL
+} BinOp;
+
+typedef struct Node {
+    struct Node* left;
+    struct Node* right;
+    float value;
+    BinOp operation;
+} Node;
 
 // CFG Specifically CNF
 // S -> aS | aa
@@ -163,6 +176,8 @@ char* join(char* left, char* production, char* right) {
 
 }
 
+static int word_parsed_count = 0;
+
 void generate_word(Grammar g, int n, char* word) {
 
     for(int i = 0; i < strlen(word); i++) {
@@ -181,25 +196,66 @@ void generate_word(Grammar g, int n, char* word) {
 
             word = join(left, symbol_production, right);
 
-            printf("\nNEW WORD: %s\n", word);
+            /* printf("\nNEW WORD: %s\n", word); */
 
             /* printf("    Left: %s", left); */
             /* printf("    Production: %s", symbol_production); */
             /* printf("    Right: %s", right); */
 
             generate_word(g, n, word);
-            return;
+            word_parsed_count++;
+
+            if(word_parsed_count == 1) {
+
+                FILE* fp = fopen("./production_output", "w");
+
+                if(!fp) {
+                    fprintf(stderr, "[-] ERROR OPENING THE FILE 'production_output'\n");
+                    exit(-1);
+                }
+
+                char* production_output_string = collect_string(word, 0, strlen(word));
+
+                if(fwrite(production_output_string , 1, strlen(production_output_string), fp) == 0) {
+                    fprintf(stderr, "[-] ERROR WRITING TO THE FILE 'production_output'\n");
+                    exit(-1);
+                };
+
+                fclose(fp);
+
+            } else {
+
+                return;
+
+            }
 
         }
 
     }
 
+    return;
+
 }
 
+void parser_expression(FILE* fp) {
+
+    char token[128];
+    char buffer[128];
+
+    memset(token, 0, 128);
+    memset(buffer, 0, 128);
+
+}
+
+// TODO
+// 1) Implement Parser
+// 2) Pixel Engine
+// 3) Normalizing Values when mapping
 
 int main(int argc, char** argv) {
 
-    srand(47);
+    srand(6);
+    /* srand(47); */
 
     if(argv[1] == NULL) {
         fprintf(stderr, "[!] Pass Number Of Productions To Be Included\n");
@@ -209,18 +265,29 @@ int main(int argc, char** argv) {
     int n = atoi(argv[1]); // total number of productions to include from the productions_file
 
     FILE* fp = fopen("./productions", "r");
+    FILE* fp_output;
+
+    if(!fp) {
+        fprintf(stderr, "[!] ERROR READING FROM THE FILE 'Productions'\n");
+        exit(-1);
+    }
+
     Grammar g = read_productions(fp, n);
 
     int i = find_non_terminal(g, n, 'S');
     char* entry_point = get_random_production(g, i);
 
-    printf("Entry Point S -> %s\n", entry_point);
+    /* printf("Entry Point S -> %s\n", entry_point); */
     generate_word(g, n, entry_point);
     /* print_grammar(g, n); */
+
+    fp_output = fopen("./production_output", "r");
+    parser_expression(fp_output);
 
     free(g);
     free(entry_point);
     fclose(fp);
+    fclose(fp_output);
 
     return 0;
 
