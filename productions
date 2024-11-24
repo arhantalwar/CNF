@@ -1,5 +1,5 @@
 S=>F
-F=>add(P, P)|mul(Q, P)|add(P, Q)|mul(Q, Q)|mul(P, P)|add(Q, P)|mul(P, Q)|add(Q, Q)
+F=>add(P,P)|mul(Q,P)|add(P,Q)|mul(Q,Q)|mul(P,P)|add(Q,P)|mul(P,Q)|add(Q,Q)
 P=>I0.XYYYYY|F
 Q=>x|y|F
 I=>-|

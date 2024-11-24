@@ -3,17 +3,18 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
+#include <ctype.h>
 
-typedef enum BinOp {
-    ADD,
-    MUL
-} BinOp;
+typedef enum OP {
+    OP_ADD,
+    OP_MUL,
+    OP_VAL, // LEAF NODES
+} OP;
 
 typedef struct Node {
     struct Node* left;
     struct Node* right;
-    float value;
-    BinOp operation;
+    float value; // LEAF NODE
 } Node;
 
 // CFG Specifically CNF
@@ -50,6 +51,8 @@ Grammar read_productions(FILE* fp, int n) {
             fprintf(stderr, "[-] ERR ALLOCATING PRODUCTION");
         }
 
+        memset(p, 0, sizeof(Production));
+
         int num_count = 0;
 
         FILE* buffer_fp = fmemopen(buffer, strlen(buffer), "r");
@@ -67,9 +70,13 @@ Grammar read_productions(FILE* fp, int n) {
                 num_count++;
                 strcat(to_production_string, token);
                 strcat(to_production_string, "|");
-                strcpy(token, "");
+                token[0] = '\0';
             } else {
-                strcat(token, &symbol);
+                size_t token_len = strlen(token);
+                if (token_len < sizeof(token) - 1) {
+                    token[token_len] = symbol;
+                    token[token_len + 1] = '\0';
+                }            
             }
 
         }
@@ -79,7 +86,7 @@ Grammar read_productions(FILE* fp, int n) {
 
         strcat(token, &symbol);
         strcat(to_production_string, token);
-        strcpy(token, "");
+        token[0] = '\0';
 
         num_count++;
 
@@ -91,16 +98,6 @@ Grammar read_productions(FILE* fp, int n) {
         char* rule = strtok(to_production_string, "|");
 
         while (rule != NULL) {
-
-            size_t rule_len = strlen(rule);
-
-            for(int i = 0; i < rule_len; i++) {
-                if(rule[i] == '\n') {
-                    rule[i] = '\0';
-                    break;
-                }
-            }
-
             build_to_production[num_count_2++] = strdup(rule);
             rule = strtok(NULL, "|");
         }
@@ -109,7 +106,7 @@ Grammar read_productions(FILE* fp, int n) {
         p->num_production = num_count;
         Grammar[pro_count++] = p;
 
-        strcpy(to_production_string, "");
+        to_production_string[0] = '\0';
         fclose(buffer_fp);
 
     };
@@ -176,6 +173,16 @@ char* join(char* left, char* production, char* right) {
 
 }
 
+void sanitize_string(char* str) {
+    int j = 0;
+    for (int i = 0; str[i] != '\0'; i++) {
+        if (isprint(str[i]) || str[i] == '\n') {
+            str[j++] = str[i];
+        }
+    }
+    str[j] = '\0';
+}
+
 static int word_parsed_count = 0;
 
 void generate_word(Grammar g, int n, char* word) {
@@ -216,6 +223,8 @@ void generate_word(Grammar g, int n, char* word) {
 
                 char* production_output_string = collect_string(word, 0, strlen(word));
 
+                sanitize_string(production_output_string);
+
                 if(fwrite(production_output_string , 1, strlen(production_output_string), fp) == 0) {
                     fprintf(stderr, "[-] ERROR WRITING TO THE FILE 'production_output'\n");
                     exit(-1);
@@ -237,13 +246,149 @@ void generate_word(Grammar g, int n, char* word) {
 
 }
 
+Node* get_node() {
+
+    Node* n = malloc(sizeof(struct Node));
+    return n;
+
+}
+
 void parser_expression(FILE* fp) {
 
     char token[128];
-    char buffer[128];
+    char buffer[256];
 
     memset(token, 0, 128);
-    memset(buffer, 0, 128);
+    memset(buffer, 0, 256);
+
+    if(fgets(buffer, sizeof(buffer), fp) == NULL) {
+        fprintf(stderr, "[-] ERR READING FROM OUTPUT FILE\n");
+        exit(-1);
+    };
+
+    FILE* buffer_fp = fmemopen(buffer, strlen(buffer), "r");
+
+    if(buffer_fp == NULL) {
+        fprintf(stderr, "[-] ERR READING FROM OUTPUT FILE\n");
+        exit(-1);
+    };
+
+    //--------------------------------------------------- TOKENIZATION
+
+    int is_token;
+    int curr_index = 0;
+    int total_tokens = 0;
+    char symbol = buffer[curr_index];
+
+    char** token_list = (char**) malloc(sizeof(char*) * 1);
+
+    while(buffer[curr_index] != '\0') {
+
+        symbol = buffer[curr_index];
+
+        if (strlen(token) + 1 < sizeof(token)) {
+
+            char temp[2] = {symbol, '\0'};
+            strcat(token, temp);
+
+        } else {
+
+            fprintf(stderr, "[-] ERR TOKEN OVERFLOW");
+            exit(-1);
+
+        }
+
+        /* printf("Current token : %s\n", token); */
+
+        if (strcmp(token, "mul") == 0) {
+            /* printf("FOUND %s\n", token); */
+            
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "add") == 0) {
+            /* printf("FOUND %s\n", token); */
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "(") == 0) {
+            /* printf("FOUND %s\n", token); */
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, ")") == 0) {
+            /* printf("FOUND %s\n", token); */
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, ",") == 0) {
+            /* printf("FOUND %s\n", token); */
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "y") == 0) {
+            /* printf("FOUND %s\n", token); */
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "x") == 0) {
+            /* printf("FOUND %s\n", token); */
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "-") == 0 || isdigit(symbol)) {
+
+            int temp = curr_index;
+            char sym = buffer[temp];
+
+            if (sym == '-') {
+                temp++;
+                sym = buffer[temp];
+            }
+
+            while(isdigit(sym) || sym == '.') {
+                temp++;
+                sym = buffer[temp];
+            }
+
+            char* num = collect_string(buffer, curr_index, temp);
+            /* printf("FOUND %s\n", num); */
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(num);
+            token[0] = '\0';
+
+            curr_index = temp-1;
+            
+        }
+
+        /* printf("%c\n", symbol); */
+        /* printf("%s\n", token); */
+
+        curr_index++;
+
+    }
+
+    //--------------------------------------------------- PARSING
+
+    for(int i = 0; i < total_tokens; i++) {
+
+
+
+    }
 
 }
 
