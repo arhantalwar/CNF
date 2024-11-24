@@ -8,14 +8,22 @@
 typedef enum OP {
     OP_ADD,
     OP_MUL,
-    OP_VAL, // LEAF NODES
+    OP_VAL,     // LEAF NODES
+    OP_X,       // X
+    OP_Y,       // Y
 } OP;
 
 typedef struct Node {
     struct Node* left;
     struct Node* right;
-    float value; // LEAF NODE
+    char* value; // LEAF NODE
+    OP operation;
 } Node;
+
+typedef struct Token_Info {
+    char** token_list;
+    int total_tokens;
+} Token_Info;
 
 // CFG Specifically CNF
 // S -> aS | aa
@@ -248,12 +256,17 @@ void generate_word(Grammar g, int n, char* word) {
 
 Node* get_node() {
 
-    Node* n = malloc(sizeof(struct Node));
-    return n;
+    Node* new_node = malloc(sizeof(struct Node));
+
+    new_node->left = NULL;
+    new_node->right = NULL;
+    new_node->value = NULL;
+
+    return new_node;
 
 }
 
-void parser_expression(FILE* fp) {
+Token_Info* tokenize_expression(FILE* fp) {
 
     char token[128];
     char buffer[256];
@@ -275,7 +288,6 @@ void parser_expression(FILE* fp) {
 
     //--------------------------------------------------- TOKENIZATION
 
-    int is_token;
     int curr_index = 0;
     int total_tokens = 0;
     char symbol = buffer[curr_index];
@@ -382,14 +394,161 @@ void parser_expression(FILE* fp) {
 
     }
 
-    //--------------------------------------------------- PARSING
+    Token_Info* token_info = (Token_Info*) malloc(sizeof(Token_Info));
+    token_info->token_list = token_list;
+    token_info->total_tokens = total_tokens;
 
-    for(int i = 0; i < total_tokens; i++) {
+    return token_info;
 
 
+}
+
+Node* parse_tree(Token_Info token_info, Node* node, int* token_to_parse) {
+
+    if (*token_to_parse == token_info.total_tokens) {
+        return node;
+    }
+
+    char* token = token_info.token_list[*token_to_parse];
+
+    if (*token_to_parse == 0) {
+
+        if (strcmp(token, "mul") == 0) {
+            node->operation = OP_MUL;
+        } else if (strcmp(token, "add") == 0) {
+            node->operation = OP_ADD;
+        }
+
+        (*token_to_parse)++;
+        parse_tree(token_info, node, token_to_parse);
+
+    } else if (strcmp(token, "mul") == 0) {
+
+        node->operation = OP_MUL;
+
+        (*token_to_parse)++;
+        node->left = get_node();
+        parse_tree(token_info, node->left, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = get_node();
+        parse_tree(token_info, node->right, token_to_parse);
+
+    } else if (strcmp(token, "add") == 0) {
+
+        node->operation = OP_ADD;
+
+        (*token_to_parse)++;
+        node->left = get_node();
+        parse_tree(token_info, node->left, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = get_node();
+        parse_tree(token_info, node->right, token_to_parse);
+
+    } else if (strcmp(token, "(") == 0) {
+
+        (*token_to_parse)++;
+        node->left = get_node();
+        parse_tree(token_info, node->left, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = get_node();
+        parse_tree(token_info, node->right, token_to_parse);
+
+    } else if (strcmp(token, ")") == 0) {
+
+        return node;
+
+    } else if (strcmp(token, ",") == 0) {
+
+        return node;
+
+    } else if (strcmp(token, "x") == 0) {
+
+        (*token_to_parse)++;
+
+        node->left = NULL;
+        node->right = NULL;
+
+        node->value = strdup(token);
+        node->operation = OP_X;
+
+    } else if (strcmp(token, "y") == 0) {
+
+        (*token_to_parse)++;
+
+        node->left = NULL;
+        node->right = NULL;
+
+        node->value = strdup(token);
+        node->operation = OP_Y;
+
+    } else {
+
+        (*token_to_parse)++;
+
+        node->left = NULL;
+        node->right = NULL;
+
+        node->value = strdup(token);
+        node->operation = OP_VAL;
 
     }
 
+    return node;
+
+}
+
+float evaluate_tree(Node* node, float X, float Y) {
+
+    if (node == NULL) {
+        return 0.293423;
+    }
+
+    if (node->operation == OP_VAL) {
+        return atof(node->value);
+    }
+
+    if (node->operation == OP_X) {
+        return X;
+    }
+
+    if (node->operation == OP_Y) {
+        return Y;
+    }
+
+    float left, right;
+
+
+    left = evaluate_tree(node->left, X, Y);
+
+    right = evaluate_tree(node->right, X, Y);
+
+    if (node->operation == OP_ADD) {
+        return left+right;
+    }
+    else if (node->operation == OP_MUL) {
+        return left*right;
+    }
+
+}
+
+void print_tree_inorder(Node* root) {
+    if (root) {
+
+        /* if (root->operation == OP_ADD) { */
+        /*     printf("ADD\n"); */
+        /* } else if (root->operation == OP_MUL) { */
+        /*     printf("MUL\n"); */
+        /* } else if (root->operation == OP_VAL) { */
+        /*     printf("%s\n", root->value); */
+        /* } */
+
+        print_tree_inorder(root->left);
+        print_tree_inorder(root->right);
+
+    }
 }
 
 // TODO
@@ -427,7 +586,16 @@ int main(int argc, char** argv) {
     /* print_grammar(g, n); */
 
     fp_output = fopen("./production_output", "r");
-    parser_expression(fp_output);
+    Token_Info* token_info = tokenize_expression(fp_output);
+
+    Node* root;
+    int token_to_parse = 0;
+
+    root = parse_tree(*token_info, root, &token_to_parse);
+    /* print_tree_inorder(root); */
+
+    float ans = evaluate_tree(root, 1.1, 2.2);
+    printf("%f\n", ans);
 
     free(g);
     free(entry_point);
