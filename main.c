@@ -1,23 +1,37 @@
+#include <math.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <raylib.h>
+
+#define WIDTH 500
+#define HEIGHT 500
 
 typedef enum OP {
-    OP_ADD,
-    OP_MUL,
+    OP_ADD,     // INTERNAL NODES
+    OP_MUL,     // INTERNAL NODES
     OP_VAL,     // LEAF NODES
-    OP_X,       // X
-    OP_Y,       // Y
+    OP_X,       // VAR LEAF NODE X 
+    OP_Y,       // VAR LEAF NODE Y
 } OP;
+
+typedef struct Grid {
+    float x;
+    float y;
+} Grid;
+
+typedef struct ImgGrid {
+    Color c;
+} ImgGrid;
 
 typedef struct Node {
     struct Node* left;
     struct Node* right;
-    char* value; // LEAF NODE
-    OP operation;
+    char* value;                // LEAF NODE
+    OP operation;               // INTERNAL NODE
 } Node;
 
 typedef struct Token_Info {
@@ -28,12 +42,12 @@ typedef struct Token_Info {
 // CFG Specifically CNF
 // S -> aS | aa
 typedef struct Production {
-    int num_production; // 2 Productions
-    char from_production; // S
-    char** to_production; // aS and aa
+    int num_production;         // 2 Productions
+    char from_production;       // S
+    char** to_production;       // aS and aa
 } Production;
 
-typedef Production** Grammar;// Set of Productions = Grammar
+typedef Production** Grammar;   // Set of Productions = Grammar
 
 Grammar read_productions(FILE* fp, int n) {
 
@@ -211,12 +225,6 @@ void generate_word(Grammar g, int n, char* word) {
 
             word = join(left, symbol_production, right);
 
-            /* printf("\nNEW WORD: %s\n", word); */
-
-            /* printf("    Left: %s", left); */
-            /* printf("    Production: %s", symbol_production); */
-            /* printf("    Right: %s", right); */
-
             generate_word(g, n, word);
             word_parsed_count++;
 
@@ -310,52 +318,43 @@ Token_Info* tokenize_expression(FILE* fp) {
 
         }
 
-        /* printf("Current token : %s\n", token); */
-
         if (strcmp(token, "mul") == 0) {
-            /* printf("FOUND %s\n", token); */
-            
+
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
         } else if (strcmp(token, "add") == 0) {
-            /* printf("FOUND %s\n", token); */
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
         } else if (strcmp(token, "(") == 0) {
-            /* printf("FOUND %s\n", token); */
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
         } else if (strcmp(token, ")") == 0) {
-            /* printf("FOUND %s\n", token); */
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
         } else if (strcmp(token, ",") == 0) {
-            /* printf("FOUND %s\n", token); */
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
         } else if (strcmp(token, "y") == 0) {
-            /* printf("FOUND %s\n", token); */
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
         } else if (strcmp(token, "x") == 0) {
-            /* printf("FOUND %s\n", token); */
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
@@ -377,18 +376,14 @@ Token_Info* tokenize_expression(FILE* fp) {
             }
 
             char* num = collect_string(buffer, curr_index, temp);
-            /* printf("FOUND %s\n", num); */
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(num);
             token[0] = '\0';
 
             curr_index = temp-1;
-            
-        }
 
-        /* printf("%c\n", symbol); */
-        /* printf("%s\n", token); */
+        }
 
         curr_index++;
 
@@ -427,7 +422,7 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
         return node;
     }
 
-    else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.') {
+    else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.' || token[0] == '-') {
         Node* node = get_node();
 
         if (strcmp(token, "x") == 0) {
@@ -484,6 +479,91 @@ float evaluate_tree(Node* node, float X, float Y) {
 
 }
 
+void free_tree(Node* node) {
+
+    if(node == NULL) {
+        return;
+    }
+
+    if(node->left) {
+        free_tree(node->left);
+    }
+
+    if(node->right) {
+        free_tree(node->right);
+    }
+
+    free(node);
+
+}
+
+float normalization(float val) {
+    return tanhf(val);
+}
+
+float randf(float min, float max) {
+    return (min + (float) rand() / (float)(RAND_MAX / (max - min)));
+}
+
+Grid** initialize_grid() {
+
+    Grid** grid = (Grid**) malloc(sizeof(Grid*) * (WIDTH));
+
+    for(int i = 0; i < WIDTH; i++) {
+        float ni = (float)i/WIDTH*2.0f - 1;
+        grid[i] = (Grid*) malloc(sizeof(Grid) * HEIGHT);
+        for(int j = 0; j < HEIGHT; j++) {
+            float nj = (float)j/HEIGHT*2.0f - 1;
+            grid[i][j].x = ni;
+            grid[i][j].y = nj;
+        }
+    }
+
+    return grid;
+
+}
+
+ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root) {
+
+    ImgGrid** img_grid = (ImgGrid**) malloc(sizeof(ImgGrid*) * (WIDTH));
+
+    for(int i = 0; i < WIDTH; i++) {
+        img_grid[i] = (ImgGrid*) malloc(sizeof(ImgGrid) * HEIGHT);
+        for(int j = 0; j < HEIGHT; j++) {
+
+            float eval = evaluate_tree(parse_tree_root, grid[i][j].x, grid[i][j].y);
+            float scaled = (eval - 1)/2 * 255.0f;
+
+            img_grid[i][j].c = (Color){
+                    .r = scaled * 1.2,
+                    .g = scaled * 2.2,
+                    .b = scaled * 0.1,
+                    .a = 255,
+                    // tweak's
+                    // You can multiply r, g, b with random values to get different colors
+            };
+
+        }
+    }
+
+    return img_grid;
+
+}
+
+void free_grid(Grid** grid) {
+    for (int i = 0; i < WIDTH; i++) {
+        free(grid[i]);
+    }
+    free(grid);
+}
+
+void free_img_grid(ImgGrid** grid_img) {
+    for (int i = 0; i < WIDTH; i++) {
+        free(grid_img[i]);
+    }
+    free(grid_img);
+}
+
 const char* get_op_name(OP op) {
     switch (op) {
         case OP_ADD: return "ADD";
@@ -491,7 +571,7 @@ const char* get_op_name(OP op) {
         case OP_VAL: return "VAL";
         case OP_X: return "X";
         case OP_Y: return "Y";
-        default: return "UNKNOWN";
+        default: return "INVALID";
     }
 }
 
@@ -525,15 +605,11 @@ void print_tree(Node* node) {
 
 }
 
-// TODO
-// 1) Implement Parser
-// 2) Pixel Engine
-// 3) Normalizing Values when mapping
-
 int main(int argc, char** argv) {
 
-    srand(6);
-    /* srand(47); */
+    /* [6, 8, 2024] */
+    /* srand(2024); */
+    srand(clock());
 
     if(argv[1] == NULL) {
         fprintf(stderr, "[!] Pass Number Of Productions To Be Included\n");
@@ -552,29 +628,58 @@ int main(int argc, char** argv) {
 
     Grammar g = read_productions(fp, n);
 
-    int i = find_non_terminal(g, n, 'S');
-    char* entry_point = get_random_production(g, i);
+    int non_terminal = find_non_terminal(g, n, 'S');
+    char* entry_point = get_random_production(g, non_terminal);
 
-    /* printf("Entry Point S -> %s\n", entry_point); */
     generate_word(g, n, entry_point);
-    /* print_grammar(g, n); */
 
     fp_output = fopen("./production_output", "r");
+    // tweak's
+    // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
     Token_Info* token_info = tokenize_expression(fp_output);
 
     Node* root;
     int token_to_parse = 0;
 
     root = parse_tree(*token_info, &token_to_parse);
-    /* print_tree(root); */
 
-    float ans = evaluate_tree(root, 1.1, 2.2);
-    printf("%f\n", ans);
+    Grid** grid = initialize_grid();
+    ImgGrid** img_grid = map_to_img_grid(grid, root);
+
+    SetTraceLogLevel(LOG_WARNING);
+    InitWindow(WIDTH, HEIGHT, "FRAME");
+    SetTargetFPS(60);
+
+    while (!WindowShouldClose()) {
+
+        BeginDrawing();
+
+        ClearBackground(RAYWHITE);
+
+        for(int i = 0; i < WIDTH; i++) {
+            for(int j = 0; j < HEIGHT; j++) {
+                DrawPixel(i, j, img_grid[i][j].c);
+            }
+        }
+
+        if (IsKeyPressed(KEY_S)) {
+            TakeScreenshot("output.png");
+            break;
+        }
+
+        EndDrawing();
+
+    }
 
     free(g);
     free(entry_point);
     fclose(fp);
     fclose(fp_output);
+    free_tree(root);
+    free_grid(grid);
+    free_img_grid(img_grid);
+
+    CloseWindow();
 
     return 0;
 
