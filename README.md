@@ -13,7 +13,7 @@ Dependencies
 
 ```console
 $ gcc main.c -o main -lraylib
-$ ./main
+$ ./main 7 (No. of productions in the productions file)
 $ feh output.png
 ```
 You can take screenshot of the image you like by pressing the 'S' key while the image is shown.
