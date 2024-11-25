@@ -403,152 +403,126 @@ Token_Info* tokenize_expression(FILE* fp) {
 
 }
 
-Node* parse_tree(Token_Info token_info, Node* node, int* token_to_parse) {
-
-    if (*token_to_parse == token_info.total_tokens) {
-        return node;
+Node* parse_tree(Token_Info token_info, int* token_to_parse) {
+    if (*token_to_parse >= token_info.total_tokens) {
+        return NULL; // No more tokens to parse
     }
 
     char* token = token_info.token_list[*token_to_parse];
 
-    if (*token_to_parse == 0) {
-
-        if (strcmp(token, "mul") == 0) {
-            node->operation = OP_MUL;
-        } else if (strcmp(token, "add") == 0) {
-            node->operation = OP_ADD;
-        }
+    if (strcmp(token, "mul") == 0 || strcmp(token, "add") == 0) {
+        Node* node = get_node();
+        node->operation = (strcmp(token, "mul") == 0) ? OP_MUL : OP_ADD;
 
         (*token_to_parse)++;
-        parse_tree(token_info, node, token_to_parse);
+        (*token_to_parse)++;
 
-    } else if (strcmp(token, "mul") == 0) {
-
-        node->operation = OP_MUL;
+        node->left = parse_tree(token_info, token_to_parse);
 
         (*token_to_parse)++;
-        node->left = get_node();
-        parse_tree(token_info, node->left, token_to_parse);
+        node->right = parse_tree(token_info, token_to_parse);
 
         (*token_to_parse)++;
-        node->right = get_node();
-        parse_tree(token_info, node->right, token_to_parse);
-
-    } else if (strcmp(token, "add") == 0) {
-
-        node->operation = OP_ADD;
-
-        (*token_to_parse)++;
-        node->left = get_node();
-        parse_tree(token_info, node->left, token_to_parse);
-
-        (*token_to_parse)++;
-        node->right = get_node();
-        parse_tree(token_info, node->right, token_to_parse);
-
-    } else if (strcmp(token, "(") == 0) {
-
-        (*token_to_parse)++;
-        node->left = get_node();
-        parse_tree(token_info, node->left, token_to_parse);
-
-        (*token_to_parse)++;
-        node->right = get_node();
-        parse_tree(token_info, node->right, token_to_parse);
-
-    } else if (strcmp(token, ")") == 0) {
 
         return node;
-
-    } else if (strcmp(token, ",") == 0) {
-
-        return node;
-
-    } else if (strcmp(token, "x") == 0) {
-
-        (*token_to_parse)++;
-
-        node->left = NULL;
-        node->right = NULL;
-
-        node->value = strdup(token);
-        node->operation = OP_X;
-
-    } else if (strcmp(token, "y") == 0) {
-
-        (*token_to_parse)++;
-
-        node->left = NULL;
-        node->right = NULL;
-
-        node->value = strdup(token);
-        node->operation = OP_Y;
-
-    } else {
-
-        (*token_to_parse)++;
-
-        node->left = NULL;
-        node->right = NULL;
-
-        node->value = strdup(token);
-        node->operation = OP_VAL;
-
     }
 
-    return node;
+    else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.') {
+        Node* node = get_node();
 
+        if (strcmp(token, "x") == 0) {
+            node->operation = OP_X;
+        } else if (strcmp(token, "y") == 0) {
+            node->operation = OP_Y;
+        } else {
+            node->operation = OP_VAL;
+        }
+
+        node->value = strdup(token);
+        (*token_to_parse)++;
+
+        return node;
+    }
+
+    return NULL;
 }
+
 
 float evaluate_tree(Node* node, float X, float Y) {
 
-    if (node == NULL) {
-        return 0.293423;
-    }
-
     if (node->operation == OP_VAL) {
         return atof(node->value);
-    }
-
-    if (node->operation == OP_X) {
+    } else if (node->operation == OP_X) {
         return X;
-    }
-
-    if (node->operation == OP_Y) {
+    } else if (node->operation == OP_Y) {
         return Y;
     }
 
     float left, right;
 
-
-    left = evaluate_tree(node->left, X, Y);
-
-    right = evaluate_tree(node->right, X, Y);
-
-    if (node->operation == OP_ADD) {
-        return left+right;
+    if (node->left != NULL) {
+        left = evaluate_tree(node->left, X, Y);
     }
-    else if (node->operation == OP_MUL) {
-        return left*right;
+
+    if (node->right != NULL) {
+        right = evaluate_tree(node->right, X, Y);
+    }
+
+    switch (node->operation) {
+
+        case OP_ADD:
+            return (left + right);
+
+        case OP_MUL:
+            return (left * right);
+
+        default:
+            printf("UNREACHABLE\n");
+            return 0.0;
+
     }
 
 }
 
-void print_tree_inorder(Node* root) {
-    if (root) {
-
-        /* if (root->operation == OP_ADD) { */
-        /*     printf("ADD\n"); */
-        /* } else if (root->operation == OP_MUL) { */
-        /*     printf("MUL\n"); */
-        /* } else if (root->operation == OP_VAL) { */
-        /*     printf("%s\n", root->value); */
-        /* } */
-
-        print_tree_inorder(root->left);
-        print_tree_inorder(root->right);
-
+const char* get_op_name(OP op) {
+    switch (op) {
+        case OP_ADD: return "ADD";
+        case OP_MUL: return "MUL";
+        case OP_VAL: return "VAL";
+        case OP_X: return "X";
+        case OP_Y: return "Y";
+        default: return "UNKNOWN";
     }
+}
+
+void print_tree(Node* node) {
+
+    if(node == NULL) {
+        return;
+    }
+
+    printf("PARENT NODE: %s\n", get_op_name(node->operation));
+
+    if (node->left != NULL) {
+        printf("\tLEFT: %s\n", get_op_name(node->left->operation));
+    } else if (node->left == NULL) {
+        printf("\tLEFT: NULL\n");
+    }
+
+    if (node->right != NULL) {
+        printf("\tRIGHT: %s\n", get_op_name(node->right->operation));
+    } else if (node->right == NULL) {
+        printf("\tRIGHT: NULL\n");
+    }
+
+    if(node->left) {
+        print_tree(node->left);
+    }
+
+    if(node->right) {
+        print_tree(node->right);
+    }
+
 }
 
 // TODO
@@ -591,8 +565,8 @@ int main(int argc, char** argv) {
     Node* root;
     int token_to_parse = 0;
 
-    root = parse_tree(*token_info, root, &token_to_parse);
-    /* print_tree_inorder(root); */
+    root = parse_tree(*token_info, &token_to_parse);
+    /* print_tree(root); */
 
     float ans = evaluate_tree(root, 1.1, 2.2);
     printf("%f\n", ans);
