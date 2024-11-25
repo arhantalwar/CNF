@@ -1,7 +1,7 @@
 # CNF
 
 Idea Implementation From http://users.ece.cmu.edu/~adrian/projects/validation/validation.pdf
-also would like to thank https://github.com/tsoding/ for streaming it. It really inspired me to do this as well.
+also would like to thank https://github.com/tsoding/ for streaming it. Got me really inspired to do this as well.
 
 ![thumbnail](./thumbnail.png)
 
