@@ -7,8 +7,11 @@
 #include <ctype.h>
 #include <raylib.h>
 
-#define WIDTH 500
-#define HEIGHT 500
+/* #define WIDTH 500 */
+/* #define HEIGHT 500 */
+
+#define WIDTH 1760
+#define HEIGHT 990
 
 typedef enum OP {
     OP_ADD,     // INTERNAL NODES
