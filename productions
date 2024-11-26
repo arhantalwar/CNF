@@ -1,7 +1,8 @@
-S=>F
-F=>add(P,P)|mul(Q,P)|sin(P,Q)|mul(Q,Q)|sin(P,P)|add(Q,P)|mul(P,Q)|add(Q,Q)|add(P,Q)|sin(Q,P)|sin(Q,Q)|mul(P,P)
-P=>I0.XYYYYY|F
-Q=>x|y|F
+S=>F|Z
+F=>add(P,P)|mul(Q,P)|cos(P,Q)|cos(P,P)|sin(P,P)|add(Q,P)|mul(P,Q)|cos(Q,P)|add(P,Q)|sin(Q,P)|sin(Q,Q)|mul(P,P)
+Z=>mul(Q,Q)|add(Q,Q)|sin(P,Q)|cos(Q,Q)
+P=>I0.XYYYYY|F|Z|I0.XYYYYY
+Q=>x|y|F|x|y|Z|x|y
 I=>-|
 X=>1|2|3|4|5|6|7|8|9|
 Y=>1|2|3|4|5|6|7|8|9|0

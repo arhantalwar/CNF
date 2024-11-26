@@ -7,16 +7,17 @@
 #include <ctype.h>
 #include <raylib.h>
 
-/* #define WIDTH 500 */
-/* #define HEIGHT 500 */
+#define WIDTH 800
+#define HEIGHT 800
 
-#define WIDTH 1760
-#define HEIGHT 990
+/* #define WIDTH 1760 */
+/* #define HEIGHT 990 */
 
 typedef enum OP {
     OP_ADD,     // INTERNAL NODE
     OP_MUL,     // INTERNAL NODE
     OP_SIN,     // INTERNAL NODE
+    OP_COS,     // INTERNAL NODE
     OP_VAL,     // LEAF     NODE
     OP_X,       // VAR LEAF NODE X 
     OP_Y,       // VAR LEAF NODE Y
@@ -30,6 +31,7 @@ const char* get_op_name(OP op) {
         case OP_X: return "X";
         case OP_Y: return "Y";
         case OP_SIN: return "SIN";
+        case OP_COS: return "COS";
         default: return "INVALID";
     }
 }
@@ -293,10 +295,10 @@ Node* get_node() {
 Token_Info* tokenize_expression(FILE* fp) {
 
     char token[128];
-    char buffer[256];
+    char buffer[1024];
 
     memset(token, 0, 128);
-    memset(buffer, 0, 256);
+    memset(buffer, 0, 1024);
 
     if(fgets(buffer, sizeof(buffer), fp) == NULL) {
         fprintf(stderr, "[-] ERR READING FROM OUTPUT FILE\n");
@@ -309,6 +311,8 @@ Token_Info* tokenize_expression(FILE* fp) {
         fprintf(stderr, "[-] ERR READING FROM OUTPUT FILE\n");
         exit(-1);
     };
+
+    printf("EXPR: %s\n", buffer);
 
     //--------------------------------------------------- TOKENIZATION
 
@@ -347,6 +351,12 @@ Token_Info* tokenize_expression(FILE* fp) {
             token[0] = '\0';
 
         } else if (strcmp(token, "sin") == 0) {
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "cos") == 0) {
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
@@ -462,7 +472,24 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
 
         return node;
 
-    }else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.' || token[0] == '-') {
+    } else if (strcmp(token, "cos") == 0) {
+
+        Node* node = get_node();
+        node->operation = OP_COS;
+
+        (*token_to_parse)++;
+        (*token_to_parse)++;
+
+        node->left = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+
+        return node;
+
+    } else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.' || token[0] == '-') {
 
         Node* node = get_node();
 
@@ -513,6 +540,9 @@ float evaluate_tree(Node* node, float X, float Y) {
             return left * right;
 
         case OP_SIN:
+            return sinf(left + right);
+
+        case OP_COS:
             return cosf(left + right);
 
         default:
@@ -642,7 +672,7 @@ void print_tree(Node* node) {
 int main(int argc, char** argv) {
 
     /* [6, 8, 2024] */
-    /* srand(13); */
+    /* srand(7); */
     srand(clock());
 
     if(argv[1] == NULL) {
