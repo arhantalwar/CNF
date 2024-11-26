@@ -18,7 +18,7 @@ typedef enum OP {
     OP_ADD,     // INTERNAL NODE
     OP_MUL,     // INTERNAL NODE
     OP_SIN,     // INTERNAL NODE
-    OP_TAN,     // INTERNAL NODE
+    OP_COS,     // INTERNAL NODE
     OP_VAL,     // LEAF     NODE
     OP_X,       // VAR LEAF NODE X 
     OP_Y,       // VAR LEAF NODE Y
@@ -32,7 +32,7 @@ const char* get_op_name(OP op) {
         case OP_X: return "X";
         case OP_Y: return "Y";
         case OP_SIN: return "SIN";
-        case OP_TAN: return "TAN";
+        case OP_COS: return "COS";
         default: return "INVALID";
     }
 }
@@ -368,7 +368,7 @@ Token_Info* tokenize_expression(FILE* fp) {
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
-        } else if (strcmp(token, "tan") == 0) {
+        } else if (strcmp(token, "cos") == 0) {
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
@@ -486,10 +486,10 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
 
         return node;
 
-    } else if (strcmp(token, "tan") == 0) {
+    } else if (strcmp(token, "cos") == 0) {
 
         Node* node = get_node();
-        node->operation = OP_TAN;
+        node->operation = OP_COS;
 
         (*token_to_parse)++;
         (*token_to_parse)++;
@@ -556,8 +556,8 @@ float evaluate_tree(Node* node, float X, float Y) {
         case OP_SIN:
             return sinf(left + right);
 
-        case OP_TAN:
-            return tanf(left * right);
+        case OP_COS:
+            return cosf(left * right);
 
         default:
             printf("UNREACHABLE\n");
@@ -619,9 +619,9 @@ ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root) {
             float scaled = (eval - 1)/2 * 255.0f;
 
             img_grid[i][j].c = (Color){
-                    .r = scaled * 0.4 * randf(1, 2),
-                    .g = scaled * 0.8,
-                    .b = scaled * 1.2,
+                    .r = scaled * 2,
+                    .g = scaled,
+                    .b = scaled * 3,
                     .a = 255,
                     // tweak's
                     // You can multiply r, g, b with random values to get different colors
@@ -716,7 +716,7 @@ int main(int argc, char** argv) {
 
     generate_word(g, n, entry_point);
 
-    fp_output = fopen("./production_output2", "r");
+    fp_output = fopen("./production_output", "r");
     // tweak's
     // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
 
