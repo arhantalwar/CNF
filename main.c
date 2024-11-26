@@ -7,8 +7,9 @@
 #include <ctype.h>
 #include <raylib.h>
 
-#define WIDTH 800
-#define HEIGHT 800
+#define WIDTH 500
+#define HEIGHT 500
+#define BUFFER_SIZE 1024 * 1024
 
 /* #define WIDTH 1760 */
 /* #define HEIGHT 990 */
@@ -17,7 +18,7 @@ typedef enum OP {
     OP_ADD,     // INTERNAL NODE
     OP_MUL,     // INTERNAL NODE
     OP_SIN,     // INTERNAL NODE
-    OP_COS,     // INTERNAL NODE
+    OP_TAN,     // INTERNAL NODE
     OP_VAL,     // LEAF     NODE
     OP_X,       // VAR LEAF NODE X 
     OP_Y,       // VAR LEAF NODE Y
@@ -31,7 +32,7 @@ const char* get_op_name(OP op) {
         case OP_X: return "X";
         case OP_Y: return "Y";
         case OP_SIN: return "SIN";
-        case OP_COS: return "COS";
+        case OP_TAN: return "TAN";
         default: return "INVALID";
     }
 }
@@ -295,12 +296,17 @@ Node* get_node() {
 Token_Info* tokenize_expression(FILE* fp) {
 
     char token[128];
-    char buffer[1024];
+    char* buffer = malloc(BUFFER_SIZE);
+
+    if (buffer == NULL) {
+        fprintf(stderr, "[-] MEMORY ALLOCATION FAILED");
+        exit(-1);
+    }
 
     memset(token, 0, 128);
-    memset(buffer, 0, 1024);
+    memset(buffer, 0, BUFFER_SIZE);
 
-    if(fgets(buffer, sizeof(buffer), fp) == NULL) {
+    if(fgets(buffer, BUFFER_SIZE, fp) == NULL) {
         fprintf(stderr, "[-] ERR READING FROM OUTPUT FILE\n");
         exit(-1);
     };
@@ -312,7 +318,13 @@ Token_Info* tokenize_expression(FILE* fp) {
         exit(-1);
     };
 
-    printf("EXPR: %s\n", buffer);
+    if (strlen(buffer) == 1) {
+        fprintf(stderr, "[-] PRODUCTION_OUTPUT OR PRODUCTION_OUTPUT2 FILE SEEMS EMPTY\n");
+        exit(-1);
+    };
+
+    printf("%s\n", buffer);
+
 
     //--------------------------------------------------- TOKENIZATION
 
@@ -356,7 +368,7 @@ Token_Info* tokenize_expression(FILE* fp) {
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
-        } else if (strcmp(token, "cos") == 0) {
+        } else if (strcmp(token, "tan") == 0) {
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
@@ -425,8 +437,10 @@ Token_Info* tokenize_expression(FILE* fp) {
     token_info->token_list = token_list;
     token_info->total_tokens = total_tokens;
 
-    return token_info;
+    free(buffer);
+    buffer = NULL;
 
+    return token_info;
 
 }
 
@@ -472,10 +486,10 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
 
         return node;
 
-    } else if (strcmp(token, "cos") == 0) {
+    } else if (strcmp(token, "tan") == 0) {
 
         Node* node = get_node();
-        node->operation = OP_COS;
+        node->operation = OP_TAN;
 
         (*token_to_parse)++;
         (*token_to_parse)++;
@@ -542,8 +556,8 @@ float evaluate_tree(Node* node, float X, float Y) {
         case OP_SIN:
             return sinf(left + right);
 
-        case OP_COS:
-            return cosf(left + right);
+        case OP_TAN:
+            return tanf(left * right);
 
         default:
             printf("UNREACHABLE\n");
@@ -569,10 +583,6 @@ void free_tree(Node* node) {
 
     free(node);
 
-}
-
-float normalization(float val) {
-    return tanhf(val);
 }
 
 float randf(float min, float max) {
@@ -609,9 +619,9 @@ ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root) {
             float scaled = (eval - 1)/2 * 255.0f;
 
             img_grid[i][j].c = (Color){
-                    .r = scaled * randf(0.1, 2.1),
-                    .g = scaled * 11,
-                    .b = scaled * 13,
+                    .r = scaled * 0.4 * randf(1, 2),
+                    .g = scaled * 0.8,
+                    .b = scaled * 1.2,
                     .a = 255,
                     // tweak's
                     // You can multiply r, g, b with random values to get different colors
@@ -671,14 +681,15 @@ void print_tree(Node* node) {
 
 int main(int argc, char** argv) {
 
-    /* [6, 8, 2024] */
-    /* srand(7); */
     srand(clock());
 
-    if(argv[1] == NULL) {
-        fprintf(stderr, "[!] Pass Number Of Productions To Be Included\n");
+    if(!argv[1]) {
+        fprintf(stderr, "Usage:\t./main <number_of_productions> <motion_flag>\n\n");
+        fprintf(stderr, "Available options:\n");
+        fprintf(stderr, "-f\t\tMakes the image move in a flowing motion\n");
         exit(-1);
     }
+
 
     FILE* fp = fopen("./productions", "r");
     FILE* fp_output;
@@ -687,6 +698,11 @@ int main(int argc, char** argv) {
 
     int token_to_parse = 0;
     int n = atoi(argv[1]); // total number of productions to include from the productions_file
+    char* motion_flag = "";
+
+    if(argv[2]) {
+        motion_flag = argv[2];
+    }
 
     if(!fp) {
         fprintf(stderr, "[!] ERROR READING FROM THE FILE 'Productions'\n");
@@ -700,7 +716,7 @@ int main(int argc, char** argv) {
 
     generate_word(g, n, entry_point);
 
-    fp_output = fopen("./production_output", "r");
+    fp_output = fopen("./production_output2", "r");
     // tweak's
     // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
 
@@ -717,26 +733,29 @@ int main(int argc, char** argv) {
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(WIDTH, HEIGHT, "FRAME");
     SetTargetFPS(60);
-    
+
     while (!WindowShouldClose()) {
-    
         BeginDrawing();
-    
         ClearBackground(RAYWHITE);
-    
-        for(int i = 0; i < WIDTH; i++) {
-            for(int j = 0; j < HEIGHT; j++) {
+
+        for (int i = 0; i < WIDTH; i++) {
+            for (int j = 0; j < HEIGHT; j++) {
+                if (strcmp(motion_flag, "-f") == 0) {
+                    img_grid[i][j].c.r = (img_grid[i][j].c.r + 1) % 256;
+                    img_grid[i][j].c.g = (img_grid[i][j].c.g + 2) % 256;
+                    img_grid[i][j].c.b = (img_grid[i][j].c.b + 3) % 256;
+                }
                 DrawPixel(i, j, img_grid[i][j].c);
             }
         }
-    
+
         if (IsKeyPressed(KEY_S)) {
             TakeScreenshot("output.png");
             break;
         }
-    
+
         EndDrawing();
-    
+
     }
 
     CloseWindow();

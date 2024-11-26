@@ -1,8 +1,10 @@
-S=>F|Z
-F=>add(P,P)|mul(Q,P)|cos(P,Q)|cos(P,P)|sin(P,P)|add(Q,P)|mul(P,Q)|cos(Q,P)|add(P,Q)|sin(Q,P)|sin(Q,Q)|mul(P,P)
-Z=>mul(Q,Q)|add(Q,Q)|sin(P,Q)|cos(Q,Q)
-P=>I0.XYYYYY|F|Z|I0.XYYYYY
-Q=>x|y|F|x|y|Z|x|y
+S=>A|B|C|D
+A=>add(P,P)|add(P,Q)|add(Q,P)|add(Q,Q)
+B=>mul(P,P)|mul(P,Q)|mul(Q,P)|mul(Q,Q)
+C=>sin(P,P)|sin(P,Q)|sin(Q,P)|sin(Q,Q)
+D=>tan(P,P)|tan(P,Q)|tan(Q,P)|tan(Q,Q)
+P=>A|I0.XYYYYY|B|I0.XYYYYY|C|I0.XYYYYY|D|I0.XYYYYY
+Q=>x|y|A|x|y|B|C|D
 I=>-|
 X=>1|2|3|4|5|6|7|8|9|
 Y=>1|2|3|4|5|6|7|8|9|0
