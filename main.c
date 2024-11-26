@@ -579,9 +579,9 @@ ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root) {
             float scaled = (eval - 1)/2 * 255.0f;
 
             img_grid[i][j].c = (Color){
-                    .r = scaled,
-                    .g = scaled,
-                    .b = scaled,
+                    .r = scaled * randf(0.1, 2.1),
+                    .g = scaled * 11,
+                    .b = scaled * 13,
                     .a = 255,
                     // tweak's
                     // You can multiply r, g, b with random values to get different colors
@@ -670,7 +670,7 @@ int main(int argc, char** argv) {
 
     generate_word(g, n, entry_point);
 
-    fp_output = fopen("./production_output2", "r");
+    fp_output = fopen("./production_output", "r");
     // tweak's
     // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
 
