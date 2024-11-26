@@ -14,12 +14,25 @@
 #define HEIGHT 990
 
 typedef enum OP {
-    OP_ADD,     // INTERNAL NODES
-    OP_MUL,     // INTERNAL NODES
-    OP_VAL,     // LEAF NODES
+    OP_ADD,     // INTERNAL NODE
+    OP_MUL,     // INTERNAL NODE
+    OP_SIN,     // INTERNAL NODE
+    OP_VAL,     // LEAF     NODE
     OP_X,       // VAR LEAF NODE X 
     OP_Y,       // VAR LEAF NODE Y
 } OP;
+
+const char* get_op_name(OP op) {
+    switch (op) {
+        case OP_ADD: return "ADD";
+        case OP_MUL: return "MUL";
+        case OP_VAL: return "VAL";
+        case OP_X: return "X";
+        case OP_Y: return "Y";
+        case OP_SIN: return "SIN";
+        default: return "INVALID";
+    }
+}
 
 typedef struct Grid {
     float x;
@@ -333,6 +346,12 @@ Token_Info* tokenize_expression(FILE* fp) {
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
+        } else if (strcmp(token, "sin") == 0) {
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
         } else if (strcmp(token, "(") == 0) {
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
@@ -402,13 +421,15 @@ Token_Info* tokenize_expression(FILE* fp) {
 }
 
 Node* parse_tree(Token_Info token_info, int* token_to_parse) {
+
     if (*token_to_parse >= token_info.total_tokens) {
-        return NULL; // No more tokens to parse
+        return NULL;
     }
 
     char* token = token_info.token_list[*token_to_parse];
 
     if (strcmp(token, "mul") == 0 || strcmp(token, "add") == 0) {
+
         Node* node = get_node();
         node->operation = (strcmp(token, "mul") == 0) ? OP_MUL : OP_ADD;
 
@@ -423,9 +444,26 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
         (*token_to_parse)++;
 
         return node;
-    }
 
-    else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.' || token[0] == '-') {
+    } else if (strcmp(token, "sin") == 0) {
+
+        Node* node = get_node();
+        node->operation = OP_SIN;
+
+        (*token_to_parse)++;
+        (*token_to_parse)++;
+
+        node->left = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+
+        return node;
+
+    }else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.' || token[0] == '-') {
+
         Node* node = get_node();
 
         if (strcmp(token, "x") == 0) {
@@ -469,10 +507,13 @@ float evaluate_tree(Node* node, float X, float Y) {
     switch (node->operation) {
 
         case OP_ADD:
-            return (left + right);
+            return left + right;
 
         case OP_MUL:
-            return (left * right);
+            return left * right;
+
+        case OP_SIN:
+            return cosf(left + right);
 
         default:
             printf("UNREACHABLE\n");
@@ -538,12 +579,13 @@ ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root) {
             float scaled = (eval - 1)/2 * 255.0f;
 
             img_grid[i][j].c = (Color){
-                    .r = scaled * 1.2,
-                    .g = scaled * 2.2,
-                    .b = scaled * 0.1,
+                    .r = scaled,
+                    .g = scaled,
+                    .b = scaled,
                     .a = 255,
                     // tweak's
                     // You can multiply r, g, b with random values to get different colors
+                    // multiply with randf(start, end) to get distored pixel effect
             };
 
         }
@@ -565,17 +607,6 @@ void free_img_grid(ImgGrid** grid_img) {
         free(grid_img[i]);
     }
     free(grid_img);
-}
-
-const char* get_op_name(OP op) {
-    switch (op) {
-        case OP_ADD: return "ADD";
-        case OP_MUL: return "MUL";
-        case OP_VAL: return "VAL";
-        case OP_X: return "X";
-        case OP_Y: return "Y";
-        default: return "INVALID";
-    }
 }
 
 void print_tree(Node* node) {
@@ -611,7 +642,7 @@ void print_tree(Node* node) {
 int main(int argc, char** argv) {
 
     /* [6, 8, 2024] */
-    /* srand(2024); */
+    /* srand(13); */
     srand(clock());
 
     if(argv[1] == NULL) {
@@ -619,10 +650,13 @@ int main(int argc, char** argv) {
         exit(-1);
     }
 
-    int n = atoi(argv[1]); // total number of productions to include from the productions_file
-
     FILE* fp = fopen("./productions", "r");
     FILE* fp_output;
+
+    Node* root;
+
+    int token_to_parse = 0;
+    int n = atoi(argv[1]); // total number of productions to include from the productions_file
 
     if(!fp) {
         fprintf(stderr, "[!] ERROR READING FROM THE FILE 'Productions'\n");
@@ -636,44 +670,47 @@ int main(int argc, char** argv) {
 
     generate_word(g, n, entry_point);
 
-    fp_output = fopen("./production_output", "r");
+    fp_output = fopen("./production_output2", "r");
     // tweak's
     // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
+
     Token_Info* token_info = tokenize_expression(fp_output);
-
-    Node* root;
-    int token_to_parse = 0;
-
+    
     root = parse_tree(*token_info, &token_to_parse);
-
+    
     Grid** grid = initialize_grid();
+
     ImgGrid** img_grid = map_to_img_grid(grid, root);
 
+    // DISPLAY THE IMG
+    
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(WIDTH, HEIGHT, "FRAME");
     SetTargetFPS(60);
-
+    
     while (!WindowShouldClose()) {
-
+    
         BeginDrawing();
-
+    
         ClearBackground(RAYWHITE);
-
+    
         for(int i = 0; i < WIDTH; i++) {
             for(int j = 0; j < HEIGHT; j++) {
                 DrawPixel(i, j, img_grid[i][j].c);
             }
         }
-
+    
         if (IsKeyPressed(KEY_S)) {
             TakeScreenshot("output.png");
             break;
         }
-
+    
         EndDrawing();
-
+    
     }
 
+    CloseWindow();
+    
     free(g);
     free(entry_point);
     fclose(fp);
@@ -681,8 +718,6 @@ int main(int argc, char** argv) {
     free_tree(root);
     free_grid(grid);
     free_img_grid(img_grid);
-
-    CloseWindow();
 
     return 0;
 
