@@ -40,27 +40,34 @@ You can also write an expression of your own in the ```production_output2```.
 (Use the grammar correctly)
 
 ```c
-    fp_output = fopen("./production_output2", "r");
+    fp_output = fopen("./production_output", "r");
     // tweak's
     // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar.
 ```
 
-To generate static images.
+### TO GENERATE STATIC OUTPUT
 
 ```console
 $ gcc main.c -o main -lraylib -lm
 $ ./main 7
 ```
 
-![Static Image](./assets/output.png)
+<div style="display: flex; justify-content: space-around;">
+  <img src="./assets/output.png" alt="STATIC 1" width="300" />
+  <img src="./assets/output2.png" alt="STATIC 2" width="300" />
+</div>
 
-To generate animated images pass '-f' flag.
+
+### TO GENERATE FLOWING OUTPUT
 
 ```console
 $ gcc main.c -o main -lraylib -lm
 $ ./main 7 -f
 ```
 
-<img src="./assets/output.gif" alt="Animated GIF" width="500">
+<div style="display: flex; justify-content: space-around;">
+  <img src="./assets/output.gif" alt="GIF 1" width="300" />
+  <img src="./assets/output2.gif" alt="GIF 2" width="300" />
+</div>
 
-you can take screenshot of the image you like by pressing the 's' key while the image is shown.
+You can take screenshot of the image you like by pressing the 'S' key while the image is shown.
