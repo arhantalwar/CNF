@@ -49,7 +49,7 @@ You can also write an expression of your own in the ```production_output2```.
 
 ```console
 $ gcc main.c -o main -lraylib -lm
-$ ./main 7
+$ ./main 10
 ```
 
 <div style="display: flex; justify-content: space-around;">
@@ -62,7 +62,7 @@ $ ./main 7
 
 ```console
 $ gcc main.c -o main -lraylib -lm
-$ ./main 7 -f
+$ ./main 10 -f
 ```
 
 <div style="display: flex; justify-content: space-around;">
