@@ -7,9 +7,10 @@
 #include <ctype.h>
 #include <raylib.h>
 
+#define BUFFER_SIZE 1024 * 1024
+
 #define WIDTH 500
 #define HEIGHT 500
-#define BUFFER_SIZE 1024 * 1024
 
 /* #define WIDTH 1760 */
 /* #define HEIGHT 990 */
@@ -716,7 +717,7 @@ int main(int argc, char** argv) {
 
     generate_word(g, n, entry_point);
 
-    fp_output = fopen("./production_output2", "r");
+    fp_output = fopen("./production_output", "r");
     // tweak's
     // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
 
@@ -732,7 +733,7 @@ int main(int argc, char** argv) {
     
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(WIDTH, HEIGHT, "FRAME");
-    SetTargetFPS(60);
+    SetTargetFPS(30);
 
     while (!WindowShouldClose()) {
         BeginDrawing();
