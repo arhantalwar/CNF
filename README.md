@@ -3,7 +3,7 @@
 Idea implementation from http://users.ece.cmu.edu/~adrian/projects/validation/validation.pdf 
 Also would like to thank https://github.com/tsoding/ for streaming it. Got me really inspired to do this as well.
 
-![thumbnail](./thumbnail.png)
+![thumbnail](./assets/thumbnail.png)
 
 ## QUICK START
 
