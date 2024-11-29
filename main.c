@@ -1,3 +1,4 @@
+#include <bits/types/timer_t.h>
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -608,9 +609,10 @@ Grid** initialize_grid() {
 
 }
 
-ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root) {
+ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root, char* motion_flag) {
 
     ImgGrid** img_grid = (ImgGrid**) malloc(sizeof(ImgGrid*) * (WIDTH));
+    int rand_num = rand() % 11;
 
     for(int i = 0; i < WIDTH; i++) {
         img_grid[i] = (ImgGrid*) malloc(sizeof(ImgGrid) * HEIGHT);
@@ -619,15 +621,44 @@ ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root) {
             float eval = evaluate_tree(parse_tree_root, grid[i][j].x, grid[i][j].y);
             float scaled = (eval - 1)/2 * 255.0f;
 
-            img_grid[i][j].c = (Color){
-                    .r = scaled * randf(0.001,0.002),
-                    .g = scaled * 1.1,
-                    .b = scaled,
-                    .a = 255,
-                    // tweak's
-                    // You can multiply r, g, b with random values to get different colors
-                    // multiply with randf(start, end) to get distored pixel effect
-            };
+            if (strcmp(motion_flag, "-p") == 0) {
+
+                img_grid[i][j].c = (Color){
+                        .r = scaled,
+                        .g = scaled * (rand() % 11) * 4,
+                        .b = scaled,
+                        .a = 255,
+                        // tweak's
+                        // You can multiply r, g, b with random values to get different colors
+                        // multiply with randf(start, end) to get distored pixel effect
+                };
+
+            } else if (strcmp(motion_flag, "-f2") == 0)  {
+                
+                img_grid[i][j].c = (Color){
+                        .r = scaled * 3 * (randf(1, 2)),
+                        .g = scaled * rand_num, // How many curves you want
+                        .b = scaled,
+                        .a = 255,
+                        // tweak's
+                        // You can multiply r, g, b with random values to get different colors
+                        // multiply with randf(start, end) to get distored pixel effect
+                };
+
+            } else {
+
+                img_grid[i][j].c = (Color){
+                        .r = scaled * 3,
+                        .g = scaled * 2, // How many curves you want
+                        .b = scaled,
+                        .a = 255,
+                        // tweak's
+                        // You can multiply r, g, b with random values to get different colors
+                        // multiply with randf(start, end) to get distored pixel effect
+                };
+
+            }
+
 
         }
     }
@@ -682,14 +713,19 @@ void print_tree(Node* node) {
 
 int main(int argc, char** argv) {
 
-    srand(clock());
-
     if(!argv[1]) {
-        fprintf(stderr, "Usage:\t./main <number_of_productions> <motion_flag>\n\n");
+        fprintf(stderr, "Usage: ./main <number_of_productions> <motion_flag>\n\n");
         fprintf(stderr, "Available options:\n");
-        fprintf(stderr, "-f\t\tMakes the image move in a flowing motion\n");
+        fprintf(stderr, "-f\t\tflowing motion\n");
+        fprintf(stderr, "-f2\t\ttrailing red motion\n");
+        fprintf(stderr, "-p\t\tParticle motion\n");
         exit(-1);
     }
+
+    clock_t seed = clock();
+    srand(seed);
+
+    printf("SEED: %ld\n", seed);
 
 
     FILE* fp = fopen("./productions", "r");
@@ -717,7 +753,7 @@ int main(int argc, char** argv) {
 
     generate_word(g, n, entry_point);
 
-    fp_output = fopen("./production_output2", "r");
+    fp_output = fopen("./production_output", "r");
     // tweak's
     // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
 
@@ -727,7 +763,7 @@ int main(int argc, char** argv) {
     
     Grid** grid = initialize_grid();
 
-    ImgGrid** img_grid = map_to_img_grid(grid, root);
+    ImgGrid** img_grid = map_to_img_grid(grid, root, motion_flag);
 
     // DISPLAY THE IMG
     
@@ -735,19 +771,55 @@ int main(int argc, char** argv) {
     InitWindow(WIDTH, HEIGHT, "FRAME");
     SetTargetFPS(30);
 
+    float amplitude = 0;
+    float k = 0.05;
+    float w = PI;
+    float offset_r, offset_g, offset_b;
+    float wave_time = 1.0f;
+
     while (!WindowShouldClose()) {
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
         for (int i = 0; i < WIDTH; i++) {
             for (int j = 0; j < HEIGHT; j++) {
-                if (strcmp(motion_flag, "-f") == 0) {
+
+                if (strcmp(motion_flag, "-f") == 0 || strcmp(motion_flag, "-f2") == 0) {
+
                     img_grid[i][j].c.r = (img_grid[i][j].c.r + 1) % 256;
                     img_grid[i][j].c.g = (img_grid[i][j].c.g + 2) % 256;
                     img_grid[i][j].c.b = (img_grid[i][j].c.b + 3) % 256;
+
+                } else if (strcmp(motion_flag, "-p") == 0) {
+
+                    offset_r = amplitude * sin((k * i) - (w * j) + wave_time + 1.0f);
+                    offset_g = amplitude * cos((k * i) - (w * j) + wave_time + 2.0f);
+                    offset_b = amplitude * tan((k * i) - (w * j) + wave_time + 3.5f);
+
+                    int r = img_grid[i][j].c.r + offset_r * 7.29f;
+                    int g = img_grid[i][j].c.g + offset_g * 7.71f;
+                    int b = img_grid[i][j].c.b + offset_b * 7.73f;
+
+                    img_grid[i][j].c.r = ((r % 256)) % 256;
+                    img_grid[i][j].c.g = ((g % 256)) % 256;
+                    img_grid[i][j].c.b = ((b % 256)) % 256;
+
+                    if (wave_time == 1000000.0f) {
+                        motion_flag = "-f";
+                    } else if (amplitude > 2.0f) {
+                        amplitude = 0.0f;
+                    } else {
+                        wave_time += 1.0f;
+                        amplitude += 0.01f;
+                    }
+
                 }
+
                 DrawPixel(i, j, img_grid[i][j].c);
+
             }
+
         }
 
         if (IsKeyPressed(KEY_S)) {
