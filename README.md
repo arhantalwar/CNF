@@ -63,6 +63,8 @@ $ ./main 10
 ```console
 $ gcc main.c -o main -lraylib -lm
 $ ./main 10 -f
+$ ./main 10 -f2
+$ ./main 10 -p
 ```
 
 <div style="display: flex; justify-content: space-around;">
