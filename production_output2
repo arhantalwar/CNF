@@ -1,3 +1,4 @@
+cos(mul(mul(x,mul(-0.568862,y)),y),sin(mul(0.810898,-0.718253),cos(0.658904,x)))
 sin(mul(add(y,y),x),y)
 add(sin(x,x),mul(cos(y,y),-0.452134))
 cos(mul(add(-0.733331,add(x,add(-0.772306,-0.677404))),add(cos(mul(add(add(mul(y,add(sin(cos(cos(x,mul(-0.03486,0.388242)),y),sin(x,x)),add(sin(mul(x,cos(-0.536021,cos(x,sin(y,x)))),x),-0.85171))),x),cos(x,add(add(-0.843783,-0.150411),y))),mul(mul(x,-0.208814),x)),sin(-0.50500,sin(-0.873743,mul(mul(-0.295341,y),add(cos(y,x),add(x,mul(x,0.138366))))))),add(-0.939847,sin(0.599674,-0.936220)))),add(mul(-0.49895,y),cos(0.829462,mul(mul(cos(add(add(0.272162,sin(sin(0.601007,-0.333810),add(x,mul(-0.21347,x)))),mul(0.375923,-0.517425)),mul(sin(mul(-0.871013,cos(cos(mul(0.424586,0.952446),add(y,x)),y)),cos(add(x,cos(-0.59394,add(cos(x,-0.452771),sin(x,-0.220143)))),y)),y)),add(sin(0.516870,y),cos(0.663906,-0.673575))),mul(-0.971158,x)))))

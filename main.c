@@ -39,11 +39,6 @@ const char* get_op_name(OP op) {
     }
 }
 
-typedef struct Grid {
-    float x;
-    float y;
-} Grid;
-
 typedef struct ImgGrid {
     Color c;
 } ImgGrid;
@@ -591,34 +586,20 @@ float randf(float min, float max) {
     return (min + (float) rand() / (float)(RAND_MAX / (max - min)));
 }
 
-Grid** initialize_grid() {
-
-    Grid** grid = (Grid**) malloc(sizeof(Grid*) * (WIDTH));
-
-    for(int i = 0; i < WIDTH; i++) {
-        float ni = (float)i/WIDTH*2.0f - 1;
-        grid[i] = (Grid*) malloc(sizeof(Grid) * HEIGHT);
-        for(int j = 0; j < HEIGHT; j++) {
-            float nj = (float)j/HEIGHT*2.0f - 1;
-            grid[i][j].x = ni;
-            grid[i][j].y = nj;
-        }
-    }
-
-    return grid;
-
-}
-
-ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root, char* motion_flag) {
+ImgGrid** map_to_img_grid(Node* parse_tree_root, char* motion_flag) {
 
     ImgGrid** img_grid = (ImgGrid**) malloc(sizeof(ImgGrid*) * (WIDTH));
     int rand_num = rand() % 11;
 
     for(int i = 0; i < WIDTH; i++) {
+
         img_grid[i] = (ImgGrid*) malloc(sizeof(ImgGrid) * HEIGHT);
+        float ni = (float)i/WIDTH*2.0f - 1;
+
         for(int j = 0; j < HEIGHT; j++) {
 
-            float eval = evaluate_tree(parse_tree_root, grid[i][j].x, grid[i][j].y);
+            float nj = (float)j/HEIGHT*2.0f - 1;
+            float eval = evaluate_tree(parse_tree_root, ni, nj);
             float scaled = (eval - 1)/2 * 255.0f;
 
             if (strcmp(motion_flag, "-p") == 0) {
@@ -665,13 +646,6 @@ ImgGrid** map_to_img_grid(Grid** grid, Node* parse_tree_root, char* motion_flag)
 
     return img_grid;
 
-}
-
-void free_grid(Grid** grid) {
-    for (int i = 0; i < WIDTH; i++) {
-        free(grid[i]);
-    }
-    free(grid);
 }
 
 void free_img_grid(ImgGrid** grid_img) {
@@ -747,10 +721,8 @@ int main(int argc, char** argv) {
     }
 
     Grammar g = read_productions(fp, n);
-
     int non_terminal = find_non_terminal(g, n, 'S');
     char* entry_point = get_random_production(g, non_terminal);
-
     generate_word(g, n, entry_point);
 
     fp_output = fopen("./production_output", "r");
@@ -758,12 +730,8 @@ int main(int argc, char** argv) {
     // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
 
     Token_Info* token_info = tokenize_expression(fp_output);
-    
     root = parse_tree(*token_info, &token_to_parse);
-    
-    Grid** grid = initialize_grid();
-
-    ImgGrid** img_grid = map_to_img_grid(grid, root, motion_flag);
+    ImgGrid** img_grid = map_to_img_grid(root, motion_flag);
 
     // DISPLAY THE IMG
     
@@ -838,7 +806,6 @@ int main(int argc, char** argv) {
     fclose(fp);
     fclose(fp_output);
     free_tree(root);
-    free_grid(grid);
     free_img_grid(img_grid);
 
     return 0;
