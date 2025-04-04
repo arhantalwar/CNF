@@ -1,4 +1,3 @@
-#include <bits/types/timer_t.h>
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -521,7 +520,6 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
     return NULL;
 }
 
-
 float evaluate_tree(Node* node, float X, float Y) {
 
     if (node->operation == OP_VAL) {
@@ -688,7 +686,7 @@ void print_tree(Node* node) {
 int main(int argc, char** argv) {
 
     if(!argv[1]) {
-        fprintf(stderr, "Usage: ./main <number_of_productions> <motion_flag>\n\n");
+        fprintf(stderr, "Usage: ./main <number_of_lines_in_the_productions_file> <motion_flag>\n");
         fprintf(stderr, "Available options:\n");
         fprintf(stderr, "-f\t\tflowing motion\n");
         fprintf(stderr, "-f2\t\ttrailing red motion\n");
@@ -696,8 +694,9 @@ int main(int argc, char** argv) {
         exit(-1);
     }
 
-    clock_t seed = clock();
-    srand(seed);
+    srand(time(NULL));
+
+    clock_t seed = (rand() % 71) * (rand() % 73);
 
     printf("SEED: %ld\n", seed);
 
@@ -736,8 +735,8 @@ int main(int argc, char** argv) {
     // DISPLAY THE IMG
     
     SetTraceLogLevel(LOG_WARNING);
-    InitWindow(WIDTH, HEIGHT, "FRAME");
     SetTargetFPS(30);
+    InitWindow(WIDTH, HEIGHT, "FRAME");
 
     float amplitude = 0;
     float k = 0.05;
@@ -778,7 +777,7 @@ int main(int argc, char** argv) {
                     } else if (amplitude > 2.0f) {
                         amplitude = 0.0f;
                     } else {
-                        wave_time += 1.0f;
+                        wave_time += 1.0f/2.0f;
                         amplitude += 0.01f;
                     }
 
