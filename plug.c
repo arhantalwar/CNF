@@ -4,7 +4,9 @@
 const char* get_op_name(OP op) {
     switch (op) {
         case OP_ADD: return "ADD";
+        case OP_SUB: return "SUB";
         case OP_MUL: return "MUL";
+        case OP_DIV: return "DIV";
         case OP_VAL: return "VAL";
         case OP_X: return "X";
         case OP_Y: return "Y";
@@ -43,14 +45,20 @@ float evaluate_tree(Node* node, float X, float Y) {
         case OP_ADD:
             return left + right;
 
+        case OP_SUB:
+            return left - right;
+
         case OP_MUL:
             return left * right;
+
+        case OP_DIV:
+            return left / right;
 
         case OP_SIN:
             return sinf(left + right);
 
         case OP_COS:
-            return cosf(left * right);
+            return cosf(left + right);
 
         default:
             printf("UNREACHABLE\n");

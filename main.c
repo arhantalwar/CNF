@@ -298,7 +298,19 @@ Token_Info* tokenize_expression(FILE* fp) {
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
+        } if (strcmp(token, "div") == 0) {
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
         } else if (strcmp(token, "add") == 0) {
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "sub") == 0) {
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
@@ -400,6 +412,23 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
 
         Node* node = get_node();
         node->operation = (strcmp(token, "mul") == 0) ? OP_MUL : OP_ADD;
+
+        (*token_to_parse)++;
+        (*token_to_parse)++;
+
+        node->left = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+
+        return node;
+
+    } else if (strcmp(token, "div") == 0 || strcmp(token, "sub") == 0) {
+
+        Node* node = get_node();
+        node->operation = (strcmp(token, "div") == 0) ? OP_DIV : OP_SUB;
 
         (*token_to_parse)++;
         (*token_to_parse)++;
@@ -526,12 +555,12 @@ void print_tree(Node* node) {
 int main(int argc, char** argv) {
 
     if(!argv[1]) {
-        fprintf(stderr, "Usage: ./main <number_of_lines_in_the_productions_file> <motion_flag>\n");
+        fprintf(stderr, "Usage: ./main [number_of_lines_in_the_productions_file] [motion_flag]\n");
         fprintf(stderr, "Available options:\n");
         fprintf(stderr, "-f \t\tflowing motion\n");
         fprintf(stderr, "-f2\t\ttrailing red motion\n");
         fprintf(stderr, "-p \t\tParticle motion\n");
-        exit(-1);
+        exit(0);
     }
 
     srand(time(NULL));

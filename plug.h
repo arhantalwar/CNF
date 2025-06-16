@@ -17,7 +17,9 @@
 
 typedef enum OP {
     OP_ADD,                     // INTERNAL NODE
+    OP_SUB,                     // INTERNAL NODE
     OP_MUL,                     // INTERNAL NODE
+    OP_DIV,                     // INTERNAL NODE
     OP_SIN,                     // INTERNAL NODE
     OP_COS,                     // INTERNAL NODE
     OP_VAL,                     // LEAF     NODE
