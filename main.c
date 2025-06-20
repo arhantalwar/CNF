@@ -1,69 +1,36 @@
-#include <bits/types/timer_t.h>
-#include <math.h>
-#include <string.h>
+#include "plug.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
-#include <stdbool.h>
 #include <ctype.h>
-#include <raylib.h>
+#include <dlfcn.h>
 
-#define BUFFER_SIZE 1024 * 1024
+void* wave_info_handler = NULL;
+void (*wave_info_fn)(WaveInfo*) = NULL;
 
-#define WIDTH 500
-#define HEIGHT 500
+void hot_reload() {
 
-/* #define WIDTH 1760 */
-/* #define HEIGHT 990 */
+    if (wave_info_handler) dlclose(wave_info_handler);
 
-typedef enum OP {
-    OP_ADD,     // INTERNAL NODE
-    OP_MUL,     // INTERNAL NODE
-    OP_SIN,     // INTERNAL NODE
-    OP_COS,     // INTERNAL NODE
-    OP_VAL,     // LEAF     NODE
-    OP_X,       // VAR LEAF NODE X 
-    OP_Y,       // VAR LEAF NODE Y
-} OP;
+    printf("UPDATING!\n");
 
-const char* get_op_name(OP op) {
-    switch (op) {
-        case OP_ADD: return "ADD";
-        case OP_MUL: return "MUL";
-        case OP_VAL: return "VAL";
-        case OP_X: return "X";
-        case OP_Y: return "Y";
-        case OP_SIN: return "SIN";
-        case OP_COS: return "COS";
-        default: return "INVALID";
+    wave_info_handler = dlopen("./plug.so", RTLD_NOW);
+
+    if (!wave_info_handler) {
+        fprintf(stderr, "ERROR OCCURED: %s\n", dlerror());
+        exit(1);
     }
+
+    wave_info_fn = dlsym(wave_info_handler, "update_wave");
+
+    if (!wave_info_fn) {
+        printf("ERROR AT dlsym\n");
+        exit(1);
+    }
+
 }
-
-typedef struct ImgGrid {
-    Color c;
-} ImgGrid;
-
-typedef struct Node {
-    struct Node* left;
-    struct Node* right;
-    char* value;                // LEAF NODE
-    OP operation;               // INTERNAL NODE
-} Node;
-
-typedef struct Token_Info {
-    char** token_list;
-    int total_tokens;
-} Token_Info;
-
-// CFG Specifically CNF
-// S -> aS | aa
-typedef struct Production {
-    int num_production;         // 2 Productions
-    char from_production;       // S
-    char** to_production;       // aS and aa
-} Production;
-
-typedef Production** Grammar;   // Set of Productions = Grammar
 
 Grammar read_productions(FILE* fp, int n) {
 
@@ -75,6 +42,7 @@ Grammar read_productions(FILE* fp, int n) {
 
     if(!Grammar) {
         fprintf(stderr, "[-] ERR ALLOCATING GRAMMAR");
+        exit(1);
     }
 
     memset(token, 0, 128);
@@ -87,6 +55,7 @@ Grammar read_productions(FILE* fp, int n) {
 
         if(!p) {
             fprintf(stderr, "[-] ERR ALLOCATING PRODUCTION");
+            exit(1);
         }
 
         memset(p, 0, sizeof(Production));
@@ -131,7 +100,9 @@ Grammar read_productions(FILE* fp, int n) {
         char** build_to_production = malloc(sizeof(char*)*num_count);
         if(!build_to_production) {
             fprintf(stderr, "[-] ERR ALLOCATING BUILD_TO_PRODUCTION");
+            exit(1);
         }
+
         int num_count_2 = 0;
         char* rule = strtok(to_production_string, "|");
 
@@ -353,7 +324,19 @@ Token_Info* tokenize_expression(FILE* fp) {
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
+        } if (strcmp(token, "div") == 0) {
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
         } else if (strcmp(token, "add") == 0) {
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "sub") == 0) {
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
@@ -366,6 +349,12 @@ Token_Info* tokenize_expression(FILE* fp) {
             token[0] = '\0';
 
         } else if (strcmp(token, "cos") == 0) {
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
+        } else if (strcmp(token, "tan") == 0) {
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
             token_list[total_tokens++] = strdup(token);
@@ -435,6 +424,8 @@ Token_Info* tokenize_expression(FILE* fp) {
     token_info->total_tokens = total_tokens;
 
     free(buffer);
+    fclose(buffer_fp);
+
     buffer = NULL;
 
     return token_info;
@@ -453,6 +444,23 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
 
         Node* node = get_node();
         node->operation = (strcmp(token, "mul") == 0) ? OP_MUL : OP_ADD;
+
+        (*token_to_parse)++;
+        (*token_to_parse)++;
+
+        node->left = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+
+        return node;
+
+    } else if (strcmp(token, "div") == 0 || strcmp(token, "sub") == 0) {
+
+        Node* node = get_node();
+        node->operation = (strcmp(token, "div") == 0) ? OP_DIV : OP_SUB;
 
         (*token_to_parse)++;
         (*token_to_parse)++;
@@ -500,6 +508,23 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
 
         return node;
 
+    } else if (strcmp(token, "tan") == 0) {
+
+        Node* node = get_node();
+        node->operation = OP_TAN;
+
+        (*token_to_parse)++;
+        (*token_to_parse)++;
+
+        node->left = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+
+        return node;
+
     } else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.' || token[0] == '-') {
 
         Node* node = get_node();
@@ -521,49 +546,6 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
     return NULL;
 }
 
-
-float evaluate_tree(Node* node, float X, float Y) {
-
-    if (node->operation == OP_VAL) {
-        return atof(node->value);
-    } else if (node->operation == OP_X) {
-        return X;
-    } else if (node->operation == OP_Y) {
-        return Y;
-    }
-
-    float left, right;
-
-    if (node->left != NULL) {
-        left = evaluate_tree(node->left, X, Y);
-    }
-
-    if (node->right != NULL) {
-        right = evaluate_tree(node->right, X, Y);
-    }
-
-    switch (node->operation) {
-
-        case OP_ADD:
-            return left + right;
-
-        case OP_MUL:
-            return left * right;
-
-        case OP_SIN:
-            return sinf(left + right);
-
-        case OP_COS:
-            return cosf(left * right);
-
-        default:
-            printf("UNREACHABLE\n");
-            return 0.0;
-
-    }
-
-}
-
 void free_tree(Node* node) {
 
     if(node == NULL) {
@@ -579,72 +561,6 @@ void free_tree(Node* node) {
     }
 
     free(node);
-
-}
-
-float randf(float min, float max) {
-    return (min + (float) rand() / (float)(RAND_MAX / (max - min)));
-}
-
-ImgGrid** map_to_img_grid(Node* parse_tree_root, char* motion_flag) {
-
-    ImgGrid** img_grid = (ImgGrid**) malloc(sizeof(ImgGrid*) * (WIDTH));
-    int rand_num = rand() % 11;
-
-    for(int i = 0; i < WIDTH; i++) {
-
-        img_grid[i] = (ImgGrid*) malloc(sizeof(ImgGrid) * HEIGHT);
-        float ni = (float)i/WIDTH*2.0f - 1;
-
-        for(int j = 0; j < HEIGHT; j++) {
-
-            float nj = (float)j/HEIGHT*2.0f - 1;
-            float eval = evaluate_tree(parse_tree_root, ni, nj);
-            float scaled = (eval - 1)/2 * 255.0f;
-
-            if (strcmp(motion_flag, "-p") == 0) {
-
-                img_grid[i][j].c = (Color){
-                        .r = scaled,
-                        .g = scaled * (rand() % 11) * 4,
-                        .b = scaled,
-                        .a = 255,
-                        // tweak's
-                        // You can multiply r, g, b with random values to get different colors
-                        // multiply with randf(start, end) to get distored pixel effect
-                };
-
-            } else if (strcmp(motion_flag, "-f2") == 0)  {
-                
-                img_grid[i][j].c = (Color){
-                        .r = scaled * 3 * (randf(1, 2)),
-                        .g = scaled * rand_num, // How many curves you want
-                        .b = scaled,
-                        .a = 255,
-                        // tweak's
-                        // You can multiply r, g, b with random values to get different colors
-                        // multiply with randf(start, end) to get distored pixel effect
-                };
-
-            } else {
-
-                img_grid[i][j].c = (Color){
-                        .r = scaled * 3,
-                        .g = scaled * 2, // How many curves you want
-                        .b = scaled,
-                        .a = 255,
-                        // tweak's
-                        // You can multiply r, g, b with random values to get different colors
-                        // multiply with randf(start, end) to get distored pixel effect
-                };
-
-            }
-
-
-        }
-    }
-
-    return img_grid;
 
 }
 
@@ -688,16 +604,17 @@ void print_tree(Node* node) {
 int main(int argc, char** argv) {
 
     if(!argv[1]) {
-        fprintf(stderr, "Usage: ./main <number_of_productions> <motion_flag>\n\n");
+        fprintf(stderr, "Usage: ./main [number_of_lines_in_the_productions_file] [motion_flag]\n");
         fprintf(stderr, "Available options:\n");
-        fprintf(stderr, "-f\t\tflowing motion\n");
+        fprintf(stderr, "-f \t\tflowing motion\n");
         fprintf(stderr, "-f2\t\ttrailing red motion\n");
-        fprintf(stderr, "-p\t\tParticle motion\n");
-        exit(-1);
+        fprintf(stderr, "-p \t\tParticle motion\n");
+        exit(0);
     }
 
-    clock_t seed = clock();
-    srand(seed);
+    srand(time(NULL));
+
+    clock_t seed = (rand() % 71) * (rand() % 73);
 
     printf("SEED: %ld\n", seed);
 
@@ -708,7 +625,7 @@ int main(int argc, char** argv) {
     Node* root;
 
     int token_to_parse = 0;
-    int n = atoi(argv[1]); // total number of productions to include from the productions_file
+    int n = atoi(argv[1]);                      // total number of productions to include from the productions_file
     char* motion_flag = "";
 
     if(argv[2]) {
@@ -721,77 +638,67 @@ int main(int argc, char** argv) {
     }
 
     Grammar g = read_productions(fp, n);
+    
     int non_terminal = find_non_terminal(g, n, 'S');
+    
     char* entry_point = get_random_production(g, non_terminal);
-    generate_word(g, n, entry_point);
 
-    fp_output = fopen("./production_output", "r");
-    // tweak's
-    // Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar
+    /* generate_word(g, n, entry_point); */
+
+    fp_output = fopen("./production_output2", "r");
+    /* tweak's */
+    /* Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar */
+    /* Also comment out generate_word() to avoid unnecessary computing of word generation */
+
+    if(!fp_output) {
+        fprintf(stderr, "[-] ERROR OPENING THE FILE\n");
+        fprintf(stderr, "[-] MAY BE NO SUCH FILE FOUND OR PERMISSON\n");
+        exit(-1);
+    }
 
     Token_Info* token_info = tokenize_expression(fp_output);
+
     root = parse_tree(*token_info, &token_to_parse);
+    
     ImgGrid** img_grid = map_to_img_grid(root, motion_flag);
 
-    // DISPLAY THE IMG
-    
-    SetTraceLogLevel(LOG_WARNING);
-    InitWindow(WIDTH, HEIGHT, "FRAME");
-    SetTargetFPS(30);
+    WaveInfo wave_info = {
+        .amplitude = 0.01,
+        .k = 0.02,
+        .w = 2 * PI,
+        .wave_time = 2.0f
+    };
 
-    float amplitude = 0;
-    float k = 0.05;
-    float w = PI;
-    float offset_r, offset_g, offset_b;
-    float wave_time = 1.0f;
+    // DISPLAY THE IMG
+
+    SetTraceLogLevel(LOG_WARNING);
+    SetTargetFPS(60);
+    InitWindow(WIDTH, HEIGHT, "FRAME");
 
     while (!WindowShouldClose()) {
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
+        if(IsKeyPressed(KEY_R)) {
+            hot_reload();
+            if (wave_info_fn) {
+                wave_info_fn(&wave_info);
+            } else {
+                printf("FAILED TO HOTRELOAD\n");
+            }
+        }
+
         for (int i = 0; i < WIDTH; i++) {
             for (int j = 0; j < HEIGHT; j++) {
-
-                if (strcmp(motion_flag, "-f") == 0 || strcmp(motion_flag, "-f2") == 0) {
-
-                    img_grid[i][j].c.r = (img_grid[i][j].c.r + 1) % 256;
-                    img_grid[i][j].c.g = (img_grid[i][j].c.g + 2) % 256;
-                    img_grid[i][j].c.b = (img_grid[i][j].c.b + 3) % 256;
-
-                } else if (strcmp(motion_flag, "-p") == 0) {
-
-                    offset_r = amplitude * sin((k * i) - (w * j) + wave_time + 1.0f);
-                    offset_g = amplitude * cos((k * i) - (w * j) + wave_time + 2.0f);
-                    offset_b = amplitude * tan((k * i) - (w * j) + wave_time + 3.5f);
-
-                    int r = img_grid[i][j].c.r + offset_r * 7.29f;
-                    int g = img_grid[i][j].c.g + offset_g * 7.71f;
-                    int b = img_grid[i][j].c.b + offset_b * 7.73f;
-
-                    img_grid[i][j].c.r = ((r % 256)) % 256;
-                    img_grid[i][j].c.g = ((g % 256)) % 256;
-                    img_grid[i][j].c.b = ((b % 256)) % 256;
-
-                    if (wave_time == 1000000.0f) {
-                        motion_flag = "-f";
-                    } else if (amplitude > 2.0f) {
-                        amplitude = 0.0f;
-                    } else {
-                        wave_time += 1.0f;
-                        amplitude += 0.01f;
-                    }
-
-                }
-
+                update_wave(img_grid, motion_flag, i, j, &wave_info);
                 DrawPixel(i, j, img_grid[i][j].c);
-
             }
-
         }
 
         if (IsKeyPressed(KEY_S)) {
             TakeScreenshot("output.png");
+            printf("Saved Screenshot as output.png\n");
             break;
         }
 
@@ -800,9 +707,10 @@ int main(int argc, char** argv) {
     }
 
     CloseWindow();
-    
+
     free(g);
     free(entry_point);
+
     fclose(fp);
     fclose(fp_output);
     free_tree(root);
