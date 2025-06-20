@@ -2,9 +2,35 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <ctype.h>
 #include <dlfcn.h>
+
+void* wave_info_handler = NULL;
+void (*wave_info_fn)(WaveInfo*) = NULL;
+
+void hot_reload() {
+
+    if (wave_info_handler) dlclose(wave_info_handler);
+
+    printf("UPDATING!\n");
+
+    wave_info_handler = dlopen("./plug.so", RTLD_NOW);
+
+    if (!wave_info_handler) {
+        fprintf(stderr, "ERROR OCCURED: %s\n", dlerror());
+        exit(1);
+    }
+
+    wave_info_fn = dlsym(wave_info_handler, "update_wave");
+
+    if (!wave_info_fn) {
+        printf("ERROR AT dlsym\n");
+        exit(1);
+    }
+
+}
 
 Grammar read_productions(FILE* fp, int n) {
 
@@ -328,6 +354,12 @@ Token_Info* tokenize_expression(FILE* fp) {
             token_list[total_tokens++] = strdup(token);
             token[0] = '\0';
 
+        } else if (strcmp(token, "tan") == 0) {
+
+            token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
+            token_list[total_tokens++] = strdup(token);
+            token[0] = '\0';
+
         } else if (strcmp(token, "(") == 0) {
 
             token_list = realloc(token_list, (total_tokens + 1) * sizeof(char*));
@@ -476,6 +508,23 @@ Node* parse_tree(Token_Info token_info, int* token_to_parse) {
 
         return node;
 
+    } else if (strcmp(token, "tan") == 0) {
+
+        Node* node = get_node();
+        node->operation = OP_TAN;
+
+        (*token_to_parse)++;
+        (*token_to_parse)++;
+
+        node->left = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+        node->right = parse_tree(token_info, token_to_parse);
+
+        (*token_to_parse)++;
+
+        return node;
+
     } else if (strcmp(token, "x") == 0 || strcmp(token, "y") == 0 || isdigit(token[0]) || token[0] == '.' || token[0] == '-') {
 
         Node* node = get_node();
@@ -594,9 +643,9 @@ int main(int argc, char** argv) {
     
     char* entry_point = get_random_production(g, non_terminal);
 
-    generate_word(g, n, entry_point);
+    /* generate_word(g, n, entry_point); */
 
-    fp_output = fopen("./production_output", "r");
+    fp_output = fopen("./production_output2", "r");
     /* tweak's */
     /* Change ./production_output to ./production_output2 to parse a string that you have generated using the grammar */
     /* Also comment out generate_word() to avoid unnecessary computing of word generation */
@@ -620,7 +669,6 @@ int main(int argc, char** argv) {
         .wave_time = 2.0f
     };
 
-
     // DISPLAY THE IMG
 
     SetTraceLogLevel(LOG_WARNING);
@@ -631,6 +679,15 @@ int main(int argc, char** argv) {
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
+
+        if(IsKeyPressed(KEY_R)) {
+            hot_reload();
+            if (wave_info_fn) {
+                wave_info_fn(&wave_info);
+            } else {
+                printf("FAILED TO HOTRELOAD\n");
+            }
+        }
 
         for (int i = 0; i < WIDTH; i++) {
             for (int j = 0; j < HEIGHT; j++) {

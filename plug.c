@@ -1,4 +1,6 @@
 #include "plug.h"
+
+#include <math.h>
 #include <stdio.h>
 
 const char* get_op_name(OP op) {
@@ -8,10 +10,11 @@ const char* get_op_name(OP op) {
         case OP_MUL: return "MUL";
         case OP_DIV: return "DIV";
         case OP_VAL: return "VAL";
-        case OP_X: return "X";
-        case OP_Y: return "Y";
         case OP_SIN: return "SIN";
         case OP_COS: return "COS";
+        case OP_TAN: return "TAN";
+        case OP_X: return "X";
+        case OP_Y: return "Y";
         default: return "INVALID";
     }
 }
@@ -59,6 +62,9 @@ float evaluate_tree(Node* node, float X, float Y) {
 
         case OP_COS:
             return cosf(left + right);
+
+        case OP_TAN: 
+            return tanf(left + right);
 
         default:
             printf("UNREACHABLE\n");
@@ -122,12 +128,18 @@ ImgGrid** map_to_img_grid(Node* parse_tree_root, char* motion_flag) {
 
             }
 
-
         }
     }
 
     return img_grid;
 
+}
+
+void update_wave_info(WaveInfo* wave_info) {
+    wave_info->amplitude = 0.01;
+    wave_info->k = 0.02;
+    wave_info->w = 2 * PI;
+    wave_info->wave_time = 2.0f;
 }
 
 void update_wave(ImgGrid** img_grid, char* motion_flag, int i, int j, WaveInfo* wave_info) {
@@ -153,11 +165,11 @@ void update_wave(ImgGrid** img_grid, char* motion_flag, int i, int j, WaveInfo* 
         img_grid[i][j].c.b = ((b % 256)) % 256;
 
         if (wave_info->wave_time == 1000000.0f) {
-            motion_flag = "-f";
+            /* motion_flag = "-f"; */
         } else if (wave_info->amplitude > 2.0f) {
             wave_info->amplitude = 0.0f;
         } else {
-            wave_info->wave_time += 1.0f/2.0f;
+            wave_info->wave_time += 2.0f;
             wave_info->amplitude += 0.01f;
         }
 
