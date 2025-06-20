@@ -23,7 +23,7 @@ void hot_reload() {
         exit(1);
     }
 
-    wave_info_fn = dlsym(wave_info_handler, "update_wave");
+    wave_info_fn = dlsym(wave_info_handler, "update_wave_info");
 
     if (!wave_info_fn) {
         printf("ERROR AT dlsym\n");
@@ -663,11 +663,19 @@ int main(int argc, char** argv) {
     ImgGrid** img_grid = map_to_img_grid(root, motion_flag);
 
     WaveInfo wave_info = {
-        .amplitude = 0.01,
-        .k = 0.02,
+        .amplitude = 0.00,
+        .k = 0.00,
         .w = 2 * PI,
-        .wave_time = 2.0f
+        .wave_time = 0.0f
     };
+
+    /* WaveInfo wave_info = { */
+    /*     .amplitude = 0.01, */
+    /*     .k = 0.02, */
+    /*     .w = 2 * PI, */
+    /*     .wave_time = 2.0f */
+    /* }; */
+
 
     // DISPLAY THE IMG
 
